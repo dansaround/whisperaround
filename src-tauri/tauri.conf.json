@@ -15,11 +15,12 @@
         "title": "WhisperAround",
         "label": "main",
         "width": 420,
-        "height": 540,
+        "height": 560,
         "minWidth": 360,
-        "minHeight": 420,
+        "minHeight": 460,
         "resizable": true,
-        "visible": true
+        "visible": true,
+        "decorations": false
       }
     ],
     "security": {

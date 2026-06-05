@@ -92,3 +92,14 @@ evitar el toolchain cruzado bajo WSL2.
   `gpt-4o-mini-transcribe`.
 - Bajo WSLg el auto-paste actúa sobre la sesión WSLg; valida el Ctrl+V real en el
   build nativo de Windows.
+
+## Limitaciones conocidas / TODO
+
+- **Atajo global no siempre activo:** por ahora el atajo (`Ctrl+Shift+X`) parece
+  funcionar de forma fiable solo cuando la app está abierta/enfocada; falta que
+  esté "always-on" y escuche en todo momento aunque la ventana esté oculta en la
+  bandeja. Pendiente: revisar el registro del `global-shortcut` y validar en build
+  nativo de Windows (puede ser una limitación del grab global bajo WSLg). Falta
+  además observabilidad/feedback del estado mientras está en background.
+- **Cursor invisible bajo WSLg:** quirk del compositor de WSLg sobre el webview;
+  no ocurre en Windows nativo (WebView2).

@@ -5,6 +5,7 @@
  */
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import type { AppStatus, SettingsView, SettingsUpdate, StatusEvent } from "./types";
 
 /**
@@ -58,4 +59,16 @@ export function saveSettings(update: SettingsUpdate): Promise<SettingsView> {
 export function onStatus(handler: (e: StatusEvent) => void): Promise<UnlistenFn> {
   if (!IN_TAURI) return Promise.resolve(() => {});
   return listen<StatusEvent>("status", (event) => handler(event.payload));
+}
+
+/** Minimize the window (custom titlebar control). */
+export function minimizeWindow(): Promise<void> {
+  if (!IN_TAURI) return Promise.resolve();
+  return getCurrentWindow().minimize();
+}
+
+/** Hide the window to the tray (custom titlebar close button). */
+export function hideWindow(): Promise<void> {
+  if (!IN_TAURI) return Promise.resolve();
+  return getCurrentWindow().hide();
 }

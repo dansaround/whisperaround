@@ -1,6 +1,7 @@
 :root {
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
-  font-size: 14px;
+  /* Base size drives all em/rem units across the UI. 1.5x of the original 14px. */
+  font-size: 21px;
   line-height: 1.5;
   color: #e6e6e6;
   background-color: #1b1b1f;

@@ -14,6 +14,14 @@ fn main() {
         std::env::set_var("LIBGL_ALWAYS_SOFTWARE", "1");
         std::env::set_var("WEBKIT_DISABLE_COMPOSITING_MODE", "1");
         std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
+        // WSLg leaves the pointer invisible over the webview unless a cursor
+        // theme is named explicitly.
+        if std::env::var_os("XCURSOR_THEME").is_none() {
+            std::env::set_var("XCURSOR_THEME", "Adwaita");
+        }
+        if std::env::var_os("XCURSOR_SIZE").is_none() {
+            std::env::set_var("XCURSOR_SIZE", "24");
+        }
     }
 
     whisperaround_lib::run();
