@@ -1,6 +1,6 @@
 {
   "name": "whisperaround",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Superwhisper but open sourced — instant voice dictation via OpenAI Whisper.",
   "type": "module",
   "scripts": {

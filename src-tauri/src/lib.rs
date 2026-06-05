@@ -16,6 +16,7 @@ use tauri::{
 };
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 
+use settings::Settings;
 use state::AppState;
 
 const FALLBACK_SHORTCUT: &str = "CmdOrCtrl+Shift+X";
@@ -24,11 +25,15 @@ const FALLBACK_SHORTCUT: &str = "CmdOrCtrl+Shift+X";
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_clipboard_manager::init())
+        // Manage the state up-front (before setup) so the webview can never win
+        // a race and invoke a `State<AppState>` command before it exists. Setup
+        // then loads the persisted settings into this already-managed state.
+        .manage(AppState::new(Settings::default()))
         .setup(|app| {
-            // Load persisted settings and seed shared state.
+            // Load persisted settings into the already-managed state.
             let loaded = settings::load(&app.handle());
             let shortcut_str = loaded.shortcut.clone();
-            app.manage(AppState::new(loaded));
+            *app.state::<AppState>().settings.lock().unwrap() = loaded;
 
             // Pin the floating pill to the top-center of the screen on launch.
             // Also disable the OS window shadow at runtime (belt-and-suspenders

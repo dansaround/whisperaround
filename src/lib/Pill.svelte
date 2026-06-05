@@ -85,11 +85,15 @@
   }
 
   onMount(() => {
-    getStatus().then((s) => (status = s));
-    loadSettings().then((v) => {
-      shortcut = v.shortcut;
-      model = v.model;
-    });
+    getStatus()
+      .then((s) => (status = s))
+      .catch((e) => console.error("getStatus failed", e));
+    loadSettings()
+      .then((v) => {
+        shortcut = v.shortcut;
+        model = v.model;
+      })
+      .catch((e) => console.error("loadSettings failed", e));
 
     const unlisten = onStatus((e) => {
       status = e.status;

@@ -22,7 +22,7 @@
   }
 
   onMount(() => {
-    loadSettings().then(apply);
+    loadSettings().then(apply).catch((e) => console.error("loadSettings failed", e));
   });
 
   async function save() {
