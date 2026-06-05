@@ -17,13 +17,22 @@
   let status = $state<AppStatus>("idle");
   let errorMessage = $state<string | null>(null);
   let shortcut = $state("CmdOrCtrl+Shift+X");
-  let model = $state("whisper-1");
+  let model = $state("gpt-4o-mini-transcribe");
 
   // --- Local UI state -------------------------------------------------------
   let expanded = $state(false);
   let hovered = $state(false); // mouse anywhere over the pill
-  let hoveredBtn = $state<null | "model" | "record" | "expand">(null);
+  /** Button whose text tooltip is shown (only after a sustained hover). */
+  let tooltipBtn = $state<null | "model" | "record" | "expand">(null);
   let menuOpen = $state(false);
+
+  // Show the icon row immediately on hover, but only reveal the *text* tooltip
+  // after a sustained hover, and delay collapsing back to the empty pill so a
+  // grow/shrink loop at the window edge can't make it flicker.
+  const TOOLTIP_DELAY = 2000;
+  const LEAVE_DELAY = 280;
+  let leaveTimer: ReturnType<typeof setTimeout> | undefined;
+  let tipTimer: ReturnType<typeof setTimeout> | undefined;
 
   /** Transcription models offered in the dropdown. Local models = future. */
   const MODELS = [
@@ -43,14 +52,14 @@
   const showIcons = $derived(!busy && (hovered || menuOpen));
   const modelLabel = $derived(MODELS.find((m) => m.id === model)?.label ?? model);
 
-  // Tooltip only while pointing at a specific icon (not just the pill).
+  // Text tooltip shown only after a sustained hover on a specific icon.
   const tooltip = $derived.by(() => {
-    if (busy || menuOpen || !hoveredBtn) return null;
-    if (hoveredBtn === "record")
+    if (busy || menuOpen || !tooltipBtn) return null;
+    if (tooltipBtn === "record")
       return status === "error"
         ? { text: errorMessage ?? "Error", keys: [] as string[] }
         : { text: "Start recording", keys: keyParts(shortcut) };
-    if (hoveredBtn === "model") return { text: "Modelo", keys: [] };
+    if (tooltipBtn === "model") return { text: "Modelo", keys: [] };
     return { text: "Expandir", keys: [] };
   });
 
@@ -58,7 +67,7 @@
   const mode = $derived.by<PillMode>(() => {
     if (busy) return "rec";
     if (menuOpen) return "menu";
-    if (hoveredBtn) return "tip";
+    if (tooltipBtn) return "tip";
     if (hovered) return "icons";
     return "idle";
   });
@@ -98,13 +107,35 @@
     return () => {
       unlisten.then((fn) => fn());
       window.removeEventListener("keydown", onKey);
+      clearTimeout(leaveTimer);
+      clearTimeout(tipTimer);
     };
   });
 
+  function enterPill() {
+    clearTimeout(leaveTimer);
+    hovered = true;
+  }
+
+  /** Delay the collapse so the window's grow/shrink can't oscillate at its edge. */
   function leavePill() {
-    hovered = false;
-    hoveredBtn = null;
-    menuOpen = false;
+    clearTimeout(tipTimer);
+    tooltipBtn = null;
+    clearTimeout(leaveTimer);
+    leaveTimer = setTimeout(() => {
+      hovered = false;
+      menuOpen = false;
+    }, LEAVE_DELAY);
+  }
+
+  function enterBtn(which: "model" | "record" | "expand") {
+    clearTimeout(tipTimer);
+    tipTimer = setTimeout(() => (tooltipBtn = which), TOOLTIP_DELAY);
+  }
+
+  function leaveBtn() {
+    clearTimeout(tipTimer);
+    tooltipBtn = null;
   }
 
   function record() {
@@ -119,7 +150,11 @@
   }
 
   function expand() {
-    leavePill();
+    clearTimeout(leaveTimer);
+    clearTimeout(tipTimer);
+    tooltipBtn = null;
+    menuOpen = false;
+    hovered = false;
     expanded = true;
     expandPanel();
   }
@@ -210,7 +245,7 @@
   <div
     class="pill-wrap"
     role="group"
-    onmouseenter={() => (hovered = true)}
+    onmouseenter={enterPill}
     onmouseleave={leavePill}
   >
     {#if busy}
@@ -231,8 +266,8 @@
           class="icon-btn side"
           class:active={menuOpen}
           aria-label="Elegir modelo"
-          onmouseenter={() => (hoveredBtn = "model")}
-          onmouseleave={() => (hoveredBtn = null)}
+          onmouseenter={() => enterBtn("model")}
+          onmouseleave={leaveBtn}
           onclick={() => (menuOpen = !menuOpen)}
         >
           {@render sparkleIcon()}
@@ -240,8 +275,8 @@
         <button
           class="icon-btn record"
           aria-label="Grabar"
-          onmouseenter={() => (hoveredBtn = "record")}
-          onmouseleave={() => (hoveredBtn = null)}
+          onmouseenter={() => enterBtn("record")}
+          onmouseleave={leaveBtn}
           onclick={record}
         >
           {@render recordIcon()}
@@ -249,8 +284,8 @@
         <button
           class="icon-btn side"
           aria-label="Expandir"
-          onmouseenter={() => (hoveredBtn = "expand")}
-          onmouseleave={() => (hoveredBtn = null)}
+          onmouseenter={() => enterBtn("expand")}
+          onmouseleave={leaveBtn}
           onclick={expand}
         >
           {@render expandIcon()}
@@ -263,7 +298,7 @@
 
     {#if tooltip}
       <div class="tooltip">
-        <span class="tt-text" class:err={status === "error" && hoveredBtn === "record"}>{tooltip.text}</span>
+        <span class="tt-text" class:err={status === "error" && tooltipBtn === "record"}>{tooltip.text}</span>
         {#if tooltip.keys.length}
           <span class="tt-keys">{#each tooltip.keys as k (k)}<kbd>{k}</kbd>{/each}</span>
         {/if}
@@ -289,14 +324,27 @@
     padding-top: 4px;
   }
 
+  /* Subtle fade-in to mask the (instant) window resize between layouts. */
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(-3px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
   .empty-pill {
-    width: 56px;
+    width: 40px;
     height: 18px;
     border-radius: 999px;
     background: rgba(30, 30, 34, 0.95);
     border: 1px solid rgba(255, 255, 255, 0.1);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
     cursor: default;
+    animation: fadeIn 0.16s ease;
   }
   .empty-pill.recording {
     border-color: rgba(248, 113, 113, 0.5);
@@ -315,6 +363,7 @@
     border: 1px solid rgba(255, 255, 255, 0.08);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
     min-height: 38px;
+    animation: fadeIn 0.16s ease;
   }
   button.pill {
     cursor: pointer;
@@ -383,6 +432,7 @@
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
     white-space: nowrap;
     color: #d8d8df;
+    animation: fadeIn 0.16s ease;
   }
   .tt-text {
     font-weight: 500;
@@ -406,6 +456,7 @@
     border: 1px solid rgba(255, 255, 255, 0.08);
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
     min-width: 200px;
+    animation: fadeIn 0.16s ease;
   }
   .menu-item {
     display: flex;
@@ -484,11 +535,12 @@
     display: flex;
     flex-direction: column;
     height: 100%;
-    border-radius: 18px;
+    border-radius: 16px;
     background: rgba(26, 26, 30, 0.96);
     border: 1px solid rgba(255, 255, 255, 0.08);
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
     overflow: hidden;
+    animation: fadeIn 0.18s ease;
   }
   .panel.recording {
     border-color: rgba(248, 113, 113, 0.4);

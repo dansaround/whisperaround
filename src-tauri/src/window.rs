@@ -7,8 +7,8 @@
 
 use tauri::{LogicalSize, PhysicalPosition, WebviewWindow};
 
-/// Expanded panel size (logical px).
-pub const PANEL_SIZE: (f64, f64) = (580.0, 240.0);
+/// Expanded panel size (logical px). Compact, like Superwhisper's.
+pub const PANEL_SIZE: (f64, f64) = (500.0, 158.0);
 /// Gap between the window and the top edge of the screen (logical px).
 const TOP_MARGIN: f64 = 12.0;
 
@@ -28,7 +28,7 @@ pub fn size_for_mode(mode: &str) -> (f64, f64) {
         "tip" => (230.0, 112.0),  // icons + hover tooltip below
         "menu" => (230.0, 208.0), // icons + model dropdown
         "rec" => (130.0, 54.0),   // recording / processing
-        _ => (96.0, 40.0),        // idle: empty pill
+        _ => (72.0, 40.0),        // idle: empty pill (narrow)
     }
 }
 

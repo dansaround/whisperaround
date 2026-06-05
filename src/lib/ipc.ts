@@ -19,7 +19,7 @@ const IN_TAURI =
 /** Mock settings used only for the browser UI preview. */
 const previewSettings: SettingsView = {
   apiKeyConfigured: false,
-  model: "whisper-1",
+  model: "gpt-4o-mini-transcribe",
   shortcut: "CmdOrCtrl+Shift+X",
   autoPaste: true,
 };

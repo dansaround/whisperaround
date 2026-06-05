@@ -3,7 +3,7 @@
   import { loadSettings, saveSettings } from "./ipc";
   import type { SettingsView } from "./types";
 
-  let model = $state("whisper-1");
+  let model = $state("gpt-4o-mini-transcribe");
   let shortcut = $state("CmdOrCtrl+Shift+X");
   let autoPaste = $state(true);
   let apiKeyConfigured = $state(false);

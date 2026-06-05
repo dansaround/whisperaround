@@ -4,6 +4,7 @@ node_modules
 # Build outputs
 dist
 dist-ssr
+dist-installers
 
 # Rust / Tauri
 src-tauri/target

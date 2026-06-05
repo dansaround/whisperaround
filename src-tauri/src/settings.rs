@@ -22,7 +22,7 @@ pub struct Settings {
 }
 
 fn default_model() -> String {
-    "whisper-1".into()
+    "gpt-4o-mini-transcribe".into()
 }
 fn default_shortcut() -> String {
     "CmdOrCtrl+Shift+X".into()

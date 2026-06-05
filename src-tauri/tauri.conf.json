@@ -14,7 +14,7 @@
       {
         "title": "WhisperAround",
         "label": "main",
-        "width": 96,
+        "width": 72,
         "height": 40,
         "resizable": false,
         "visible": true,
