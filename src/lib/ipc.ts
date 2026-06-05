@@ -61,14 +61,43 @@ export function onStatus(handler: (e: StatusEvent) => void): Promise<UnlistenFn>
   return listen<StatusEvent>("status", (event) => handler(event.payload));
 }
 
-/** Minimize the window (custom titlebar control). */
-export function minimizeWindow(): Promise<void> {
-  if (!IN_TAURI) return Promise.resolve();
-  return getCurrentWindow().minimize();
+/** Update only the transcription model (pill model dropdown). */
+export function setModel(model: string): Promise<void> {
+  if (!IN_TAURI) {
+    previewSettings.model = model;
+    return Promise.resolve();
+  }
+  return invoke("set_model", { model });
 }
 
-/** Hide the window to the tray (custom titlebar close button). */
+export type PillMode = "idle" | "icons" | "tip" | "menu" | "rec";
+
+/** Fit the compact pill window to a UI mode. */
+export function setPillMode(mode: PillMode): Promise<void> {
+  if (!IN_TAURI) return Promise.resolve();
+  return invoke("set_pill_mode", { mode });
+}
+
+/** Grow the floating window into the expanded panel layout. */
+export function expandPanel(): Promise<void> {
+  if (!IN_TAURI) return Promise.resolve();
+  return invoke("expand_panel");
+}
+
+/** Open the standalone settings window. */
+export function openSettings(): Promise<void> {
+  if (!IN_TAURI) return Promise.resolve();
+  return invoke("open_settings");
+}
+
+/** Hide the current window to the tray. */
 export function hideWindow(): Promise<void> {
   if (!IN_TAURI) return Promise.resolve();
   return getCurrentWindow().hide();
+}
+
+/** Label of the current Tauri window ("main" pill or "settings"). */
+export function currentWindowLabel(): string {
+  if (!IN_TAURI) return "main";
+  return getCurrentWindow().label;
 }

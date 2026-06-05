@@ -70,7 +70,7 @@
   <label class="field">
     <span>Atajo global</span>
     <input type="text" bind:value={shortcut} placeholder="CmdOrCtrl+Shift+X" />
-    <small>Formato Tauri, p. ej. <code>CmdOrCtrl+Shift+X</code>. Requiere reiniciar para reasignar.</small>
+    <small>Formato Tauri, p. ej. <code>CmdOrCtrl+Shift+X</code>. Se aplica al guardar (sin reiniciar).</small>
   </label>
 
   <label class="field checkbox">

@@ -14,13 +14,27 @@
       {
         "title": "WhisperAround",
         "label": "main",
-        "width": 420,
-        "height": 560,
-        "minWidth": 360,
-        "minHeight": 460,
-        "resizable": true,
+        "width": 96,
+        "height": 40,
+        "resizable": false,
         "visible": true,
-        "decorations": false
+        "decorations": false,
+        "transparent": true,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "shadow": false
+      },
+      {
+        "title": "WhisperAround — Ajustes",
+        "label": "settings",
+        "width": 420,
+        "height": 520,
+        "minWidth": 360,
+        "minHeight": 440,
+        "resizable": true,
+        "visible": false,
+        "decorations": true,
+        "center": true
       }
     ],
     "security": {
