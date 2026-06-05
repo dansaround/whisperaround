@@ -1,0 +1,21 @@
+# Dependencies
+node_modules
+
+# Build outputs
+dist
+dist-ssr
+
+# Rust / Tauri
+src-tauri/target
+src-tauri/gen
+
+# Logs & editor
+*.log
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+.idea
+
+# Local env
+.env
+.env.*

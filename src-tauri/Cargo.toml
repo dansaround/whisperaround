@@ -1,0 +1,47 @@
+[package]
+name = "whisperaround"
+version = "0.1.0"
+description = "Superwhisper but open sourced — instant voice dictation via OpenAI Whisper."
+authors = ["WhisperAround"]
+edition = "2021"
+
+# The library that the binary entrypoint (`main.rs`) calls into. Keeping the app
+# logic in a lib lets it be reused (e.g. for mobile entry points / tests).
+[lib]
+name = "whisperaround_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["tray-icon"] }
+tauri-plugin-global-shortcut = "2"
+tauri-plugin-clipboard-manager = "2"
+
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+anyhow = "1"
+
+# Native microphone capture + WAV encoding.
+cpal = "0.15"
+hound = "3.5"
+
+# Keyboard simulation for the auto-paste (Ctrl/Cmd+V).
+enigo = "0.2"
+
+# HTTPS client for the OpenAI Whisper endpoint (rustls to avoid a system OpenSSL
+# dependency on the multipart upload path).
+reqwest = { version = "0.12", default-features = false, features = [
+  "multipart",
+  "json",
+  "rustls-tls",
+] }
+
+[profile.release]
+# Optimize for a small binary to hit the < 20 MB target.
+opt-level = "s"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
