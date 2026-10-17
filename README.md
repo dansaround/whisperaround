@@ -127,10 +127,11 @@ búsqueda de actualizaciones (GitHub).
 
 ### Code signing policy
 
-Windows releases will be signed with free code signing provided by
-[SignPath.io](https://about.signpath.io/), certificate by
-[SignPath Foundation](https://signpath.org/) (application in progress; current
-installers are unsigned).
+Current Windows installers are not code-signed yet. We plan to sign them with
+free code signing provided by [SignPath.io](https://about.signpath.io/),
+certificate by [SignPath Foundation](https://signpath.org/), once the project
+qualifies for its open-source program. Until then, each installer can be
+verified with its build-provenance attestation (see [SECURITY.md](SECURITY.md)).
 
 - Installers are built only by [GitHub Actions](.github/workflows/release.yml)
   from a tag of this repository, with a verifiable build-provenance attestation.
