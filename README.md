@@ -39,8 +39,26 @@ botón **Actualizar**.
    cursor.
 
 La píldora vive arriba en la pantalla y en la bandeja del sistema (junto al
-reloj). Pasa el ratón por encima para ver sus botones; desde la bandeja puedes
-abrir Ajustes o salir.
+reloj). Pasa el ratón por encima para ver sus botones y arrástrala desde
+cualquier parte que no sea un botón. Desde la bandeja puedes abrir Ajustes o
+salir; abrir la app otra vez también abre Ajustes.
+
+### Ajustes
+
+- **Inicio:** tus estadísticas de uso (palabras, tiempo dictado, apps) y novedades.
+- **Modos:** combinaciones de modelo de voz + idioma (por ejemplo 'Inglés con
+  OpenAI', 'Español local') para cambiar de una a otra con un atajo.
+- **Vocabulario:** nombres propios y jerga para que se escriban bien.
+- **Configuración:** idioma de la interfaz (9 idiomas), estilo y posición de la
+  píldora (Clásica / Mini / Ninguna, arriba o abajo), micrófono y atajos.
+- **Atajos:** además de combinaciones como `Ctrl+Shift+X`, puedes usar una sola
+  tecla (p. ej. **Ctrl derecho**) o un botón extra del ratón; tocar alterna la
+  grabación y mantener graba hasta soltar (push-to-talk). También hay atajos para
+  cancelar y cambiar de modo.
+- **Sonido:** sonidos de inicio y fin con volumen ajustable.
+- **Modelos:** elige modelo y gestiona tu API key.
+- **Historial:** tus transcripciones con búsqueda. Se guardan solo en tu equipo y
+  puedes desactivarlo o borrarlo.
 
 ## macOS (compilando desde el código)
 
@@ -81,6 +99,12 @@ Resumen para quien vaya a poner su API key (detalle técnico en
 - **Se guarda cifrada en el Administrador de credenciales de Windows** (en macOS,
   en el Llavero), no en un archivo de texto. La interfaz nunca la recibe: solo
   sabe si hay una configurada.
+- **Lo que dictas se queda en tu equipo.** El historial (texto, duración y la app
+  donde dictaste) se guarda en un archivo local; puedes desactivarlo o borrarlo
+  en Ajustes › Historial.
+- **Los atajos de una sola tecla o de ratón** usan un hook de teclado de Windows
+  que solo se activa si configuras uno de esos atajos. Solo reacciona a Ctrl,
+  Alt, Shift y Win; no guarda ni envía ninguna tecla.
 - **Sin telemetría, sin analíticas, sin servidores propios.** Las únicas
   conexiones son: OpenAI (si usas un modelo de la nube), PyPI y Hugging Face (la
   primera vez que usas un modelo local) y GitHub (para buscar actualizaciones).
