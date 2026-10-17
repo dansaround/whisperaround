@@ -1,15 +1,91 @@
 :root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
-  /* Base size for the (decorated) settings window. The floating pill sizes its
-     own typography in px so it stays compact regardless of this value. */
-  font-size: 15px;
-  line-height: 1.5;
-  color: #e6e6e6;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable Text", "Segoe UI", Inter,
+    system-ui, Helvetica, Arial, sans-serif;
+  /* Base size for the decorated windows (settings / welcome). The floating
+     pill sizes its own typography in px so it stays compact regardless. */
+  font-size: 13px;
+  line-height: 1.45;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  /* Motion: one ease-in-out curve for the whole settings UI. */
+  --ease: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --spring: cubic-bezier(0.34, 1.36, 0.64, 1);
+  --dur: 260ms;
+
+  --accent: #3b82f6;
+  --accent-strong: #2f6fe0;
+  --accent-soft: rgba(59, 130, 246, 0.16);
+  --green: #34c759;
+  --red: #ff453a;
+  --orange: #ff9f0a;
+  --radius: 12px;
+}
+
+/* ---------- Dark (default) ---------- */
+:root,
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #1c1c1e;
+  --sidebar: #232325;
+  --surface: #29292c;
+  --surface-2: #323236;
+  --surface-hover: #2f2f33;
+  --line: rgba(255, 255, 255, 0.07);
+  --line-strong: rgba(255, 255, 255, 0.12);
+  --text: #ececee;
+  --text-2: #9b9ba1;
+  --text-3: #6c6c72;
+  --chip: #3a3a3e;
+  --chip-line: rgba(255, 255, 255, 0.08);
+  --selected: rgba(255, 255, 255, 0.1);
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.3);
+  --track: #48484c;
+  --knob: #ffffff;
+  color: var(--text);
+
+  /* Pill */
+  --pill-bg: rgba(18, 18, 20, 0.94);
+  --pill-line: rgba(255, 255, 255, 0.1);
+  --pill-text: #f1f1f4;
+  --pill-text-2: #a1a1a8;
+  --pill-hover: rgba(255, 255, 255, 0.1);
+  --pill-panel: rgba(24, 24, 27, 0.97);
+  --pill-shadow: 0 6px 22px rgba(0, 0, 0, 0.45);
+}
+
+/* ---------- Light ---------- */
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg: #f6f6f8;
+  --sidebar: #ebebee;
+  --surface: #ffffff;
+  --surface-2: #f0f0f3;
+  --surface-hover: #f4f4f7;
+  --line: rgba(0, 0, 0, 0.07);
+  --line-strong: rgba(0, 0, 0, 0.12);
+  --text: #1d1d1f;
+  --text-2: #6e6e73;
+  --text-3: #a1a1a6;
+  --chip: #ececf0;
+  --chip-line: rgba(0, 0, 0, 0.08);
+  --selected: rgba(0, 0, 0, 0.07);
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.06);
+  --track: #d9d9de;
+  --knob: #ffffff;
+  color: var(--text);
+
+  --pill-bg: rgba(252, 252, 253, 0.94);
+  --pill-line: rgba(0, 0, 0, 0.1);
+  --pill-text: #1d1d1f;
+  --pill-text-2: #6e6e73;
+  --pill-hover: rgba(0, 0, 0, 0.07);
+  --pill-panel: rgba(250, 250, 252, 0.97);
+  --pill-shadow: 0 6px 22px rgba(0, 0, 0, 0.16);
 }
 
 * {
@@ -32,17 +108,25 @@ button {
   font-family: inherit;
   font-size: 1em;
   font-weight: 500;
-  padding: 0.5em 1em;
+  padding: 0.45em 0.95em;
   border-radius: 8px;
-  border: 1px solid transparent;
-  background-color: #2a2a30;
-  color: #e6e6e6;
+  border: 1px solid var(--line-strong);
+  background-color: var(--surface-2);
+  color: var(--text);
   cursor: pointer;
-  transition: border-color 0.2s, background-color 0.2s;
+  transition:
+    border-color 0.2s var(--ease),
+    background-color 0.2s var(--ease),
+    transform 0.2s var(--ease),
+    opacity 0.2s var(--ease);
 }
 
 button:hover {
-  border-color: #646cff;
+  background-color: var(--surface-hover);
+}
+
+button:active:not(:disabled) {
+  transform: scale(0.97);
 }
 
 button:disabled {
@@ -50,20 +134,50 @@ button:disabled {
   cursor: not-allowed;
 }
 
+button.primary {
+  background: var(--accent);
+  border-color: transparent;
+  color: #fff;
+}
+button.primary:hover {
+  background: var(--accent-strong);
+}
+
 input,
-select {
+select,
+textarea {
   font-family: inherit;
   font-size: 1em;
-  padding: 0.5em 0.7em;
+  padding: 0.5em 0.75em;
   border-radius: 8px;
-  border: 1px solid #3a3a42;
-  background-color: #232329;
-  color: #e6e6e6;
-  width: 100%;
+  border: 1px solid var(--line-strong);
+  background-color: var(--surface-2);
+  color: var(--text);
+  outline: none;
+  transition:
+    border-color 0.2s var(--ease),
+    box-shadow 0.2s var(--ease);
 }
 
 input:focus,
-select:focus {
-  outline: none;
-  border-color: #646cff;
+select:focus,
+textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+::selection {
+  background: var(--accent-soft);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur: 1ms;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    transition-duration: 1ms !important;
+  }
 }

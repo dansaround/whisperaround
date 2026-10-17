@@ -15,6 +15,8 @@ use std::time::Duration;
 use anyhow::{anyhow, Result};
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 
+use crate::i18n::{t, tf};
+
 /// Raw captured audio (interleaved `f32` frames in `[-1.0, 1.0]`).
 pub struct Recording {
     pub samples: Vec<f32>,
@@ -28,8 +30,9 @@ pub struct Recorder {
     handle: JoinHandle<Result<Recording>>,
 }
 
-/// How often the input level is reported while recording.
-const LEVEL_INTERVAL: Duration = Duration::from_millis(50);
+/// How often the input level is reported while recording (~60 Hz, so the
+/// waveform moves every frame).
+const LEVEL_INTERVAL: Duration = Duration::from_millis(16);
 
 /// Append a converted chunk to the buffer and raise the pending level to the
 /// chunk's RMS (the reporter resets it after each read, so it holds the
@@ -48,22 +51,26 @@ fn push_chunk(buf: &Mutex<Vec<f32>>, level: &AtomicU32, chunk: impl Iterator<Ite
     }
 }
 
-/// Map an RMS amplitude to a perceptual `0.0..=1.0` level (-50 dBFS → 0,
-/// -10 dBFS → 1), so normal speech fills the bars instead of barely moving them.
+/// Map an RMS amplitude to a perceptual `0.0..=1.0` level (-52 dBFS → 0,
+/// -22 dBFS → 1), so normal speech — which a laptop mic picks up around
+/// -40..-25 dBFS — swings the bars across most of their range instead of
+/// barely moving them.
 fn normalize_level(rms: f32) -> f32 {
     if rms <= 0.0 {
         return 0.0;
     }
-    ((20.0 * rms.log10() + 50.0) / 40.0).clamp(0.0, 1.0)
+    ((20.0 * rms.log10() + 52.0) / 30.0).clamp(0.0, 1.0)
 }
 
 impl Recorder {
-    /// Open the default input device and start capturing. Returns once the
+    /// Open the input device named `device_name` (the system default when
+    /// empty or no longer connected) and start capturing. Returns once the
     /// stream is actually running (or with an error if it could not start).
     /// `on_level` is called every [`LEVEL_INTERVAL`] with the normalized input
     /// level from the capture thread.
-    pub fn start(on_level: impl Fn(f32) + Send + 'static) -> Result<Recorder> {
+    pub fn start(device_name: &str, on_level: impl Fn(f32) + Send + 'static) -> Result<Recorder> {
         let (stop_tx, stop_rx) = mpsc::channel::<()>();
+        let device_name = device_name.to_string();
         let (ready_tx, ready_rx) = mpsc::channel::<Result<()>>();
 
         let handle = thread::spawn(move || -> Result<Recording> {
@@ -72,12 +79,16 @@ impl Recorder {
             let level_cb = level.clone();
             let setup = (|| -> Result<(cpal::Stream, Arc<Mutex<Vec<f32>>>, u32, u16)> {
                 let host = cpal::default_host();
-                let device = host
-                    .default_input_device()
-                    .ok_or_else(|| anyhow!("no hay dispositivo de entrada disponible"))?;
+                let named = (!device_name.is_empty())
+                    .then(|| host.input_devices().ok())
+                    .flatten()
+                    .and_then(|mut it| it.find(|d| d.name().ok().as_deref() == Some(&device_name)));
+                let device = named
+                    .or_else(|| host.default_input_device())
+                    .ok_or_else(|| anyhow!(t("error.mic.noDevice")))?;
                 let config = device
                     .default_input_config()
-                    .map_err(|e| anyhow!("config de entrada por defecto: {e}"))?;
+                    .map_err(|e| anyhow!(tf("error.mic.config", &[("error", &e)])))?;
 
                 let sample_rate = config.sample_rate().0;
                 let channels = config.channels();
@@ -122,11 +133,11 @@ impl Recorder {
                         err_fn,
                         None,
                     ),
-                    other => return Err(anyhow!("formato de muestra no soportado: {other:?}")),
+                    other => return Err(anyhow!(tf("error.mic.sampleFormat", &[("format", &format!("{other:?}"))]))),
                 }
-                .map_err(|e| anyhow!("construyendo stream: {e}"))?;
+                .map_err(|e| anyhow!(tf("error.mic.buildStream", &[("error", &e)])))?;
 
-                stream.play().map_err(|e| anyhow!("iniciando stream: {e}"))?;
+                stream.play().map_err(|e| anyhow!(tf("error.mic.startStream", &[("error", &e)])))?;
                 Ok((stream, buffer, sample_rate, channels))
             })();
 
@@ -167,7 +178,7 @@ impl Recorder {
         match ready_rx.recv() {
             Ok(Ok(())) => Ok(Recorder { stop_tx, handle }),
             Ok(Err(e)) => Err(e),
-            Err(_) => Err(anyhow!("el hilo de grabación terminó antes de iniciar")),
+            Err(_) => Err(anyhow!(t("error.recording.threadEnded"))),
         }
     }
 
@@ -176,8 +187,36 @@ impl Recorder {
         let _ = self.stop_tx.send(());
         self.handle
             .join()
-            .map_err(|_| anyhow!("el hilo de grabación entró en pánico"))?
+            .map_err(|_| anyhow!(t("error.recording.threadPanicked")))?
     }
+}
+
+/// An input device for the settings' microphone picker.
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct InputDevice {
+    pub name: String,
+    pub is_default: bool,
+}
+
+/// Every input device the OS reports, default first.
+pub fn input_devices() -> Vec<InputDevice> {
+    let host = cpal::default_host();
+    let default = host.default_input_device().and_then(|d| d.name().ok());
+    let mut out: Vec<InputDevice> = host
+        .input_devices()
+        .map(|it| {
+            it.filter_map(|d| d.name().ok())
+                .map(|name| InputDevice {
+                    is_default: default.as_deref() == Some(&name),
+                    name,
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+    out.sort_by_key(|d| !d.is_default);
+    out.dedup_by(|a, b| a.name == b.name);
+    out
 }
 
 /// Encode a [`Recording`] to an in-memory 16-bit PCM mono WAV.
@@ -214,7 +253,7 @@ mod tests {
     fn level_maps_decibels_to_unit_range() {
         assert_eq!(normalize_level(0.0), 0.0);
         assert_eq!(normalize_level(0.001), 0.0); // -60 dBFS: silence
-        assert!((normalize_level(0.01) - 0.25).abs() < 1e-4); // -40 dBFS
+        assert!((normalize_level(0.01) - 0.4).abs() < 1e-4); // -40 dBFS
         assert_eq!(normalize_level(1.0), 1.0); // clipping stays at 1
     }
 

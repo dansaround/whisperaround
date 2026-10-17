@@ -18,7 +18,7 @@ window.addEventListener("unhandledrejection", (e) => showFatal("unhandledrejecti
 let app: ReturnType<typeof mount> | undefined;
 try {
   const target = document.getElementById("app");
-  if (!target) throw new Error('No se encontró el contenedor #app en index.html');
+  if (!target) throw new Error('Missing #app container in index.html');
   app = mount(App, { target });
 } catch (err) {
   showFatal("mount", err);

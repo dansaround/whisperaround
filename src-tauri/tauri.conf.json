@@ -15,8 +15,8 @@
       {
         "title": "WhisperAround",
         "label": "main",
-        "width": 72,
-        "height": 40,
+        "width": 44,
+        "height": 24,
         "resizable": false,
         "visible": true,
         "decorations": false,
@@ -26,19 +26,24 @@
         "shadow": false
       },
       {
-        "title": "WhisperAround — Ajustes",
+        "title": "WhisperAround",
         "label": "settings",
-        "width": 420,
-        "height": 520,
-        "minWidth": 360,
-        "minHeight": 440,
+        "width": 820,
+        "height": 580,
+        "minWidth": 700,
+        "minHeight": 480,
         "resizable": true,
         "visible": false,
         "decorations": true,
-        "center": true
+        "center": true,
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true,
+        "trafficLightPosition": { "x": 20, "y": 24 },
+        "transparent": true,
+        "windowEffects": { "effects": ["sidebar", "mica"], "state": "followsWindowActiveState" }
       },
       {
-        "title": "Bienvenido a WhisperAround",
+        "title": "Welcome to WhisperAround",
         "label": "welcome",
         "width": 460,
         "height": 440,
@@ -68,7 +73,18 @@
     "macOS": {
       "minimumSystemVersion": "11.0",
       "signingIdentity": "-",
-      "entitlements": "Entitlements.plist"
+      "entitlements": "Entitlements.plist",
+      "files": {
+        "Resources/en.lproj/InfoPlist.strings": "lproj/en.lproj/InfoPlist.strings",
+        "Resources/es.lproj/InfoPlist.strings": "lproj/es.lproj/InfoPlist.strings",
+        "Resources/pt_BR.lproj/InfoPlist.strings": "lproj/pt_BR.lproj/InfoPlist.strings",
+        "Resources/fr.lproj/InfoPlist.strings": "lproj/fr.lproj/InfoPlist.strings",
+        "Resources/de.lproj/InfoPlist.strings": "lproj/de.lproj/InfoPlist.strings",
+        "Resources/it.lproj/InfoPlist.strings": "lproj/it.lproj/InfoPlist.strings",
+        "Resources/ko.lproj/InfoPlist.strings": "lproj/ko.lproj/InfoPlist.strings",
+        "Resources/ja.lproj/InfoPlist.strings": "lproj/ja.lproj/InfoPlist.strings",
+        "Resources/zh-Hans.lproj/InfoPlist.strings": "lproj/zh-Hans.lproj/InfoPlist.strings"
+      }
     }
   },
   "plugins": {

@@ -123,3 +123,69 @@ pub fn make_overlay(window: &WebviewWindow) {
         let _: () = msg_send![ns_window, setCollectionBehavior: BEHAVIOR];
     }
 }
+
+/// Name of the app the user is working in (for the history's "Apps used"),
+/// ignoring WhisperAround itself (e.g. after a click on the pill).
+pub fn frontmost_app_name() -> Option<String> {
+    let cls = AnyClass::get(c"NSWorkspace")?;
+    // SAFETY: plain NSWorkspace / NSRunningApplication getters; nil-checked.
+    unsafe {
+        let ws: *mut AnyObject = msg_send![cls, sharedWorkspace];
+        if ws.is_null() {
+            return None;
+        }
+        let app: *mut AnyObject = msg_send![ws, frontmostApplication];
+        if app.is_null() {
+            return None;
+        }
+        let bundle: *mut NSString = msg_send![app, bundleIdentifier];
+        if !bundle.is_null() && (*bundle).to_string() == "com.whisperaround.app" {
+            return None;
+        }
+        let name: *mut NSString = msg_send![app, localizedName];
+        (!name.is_null()).then(|| (*name).to_string())
+    }
+}
+
+/// Let a webview render above 60 fps on ProMotion displays. WebKit caps page
+/// rendering near 60 fps by default (`PreferPageRenderingUpdatesNear60FPSEnabled`);
+/// that flag is only reachable through WKPreferences' private feature API, so
+/// every selector is checked first and nothing happens if it's missing.
+pub fn unlock_high_refresh(window: &WebviewWindow) {
+    use objc2::sel;
+    let _ = window.with_webview(|wv| {
+        // SAFETY: `inner()` is the live WKWebView; every private selector is
+        // probed with respondsToSelector: before being sent.
+        unsafe {
+            let webview = wv.inner() as *mut AnyObject;
+            if webview.is_null() {
+                return;
+            }
+            let Some(cls) = AnyClass::get(c"WKPreferences") else {
+                return;
+            };
+            let has_features: Bool = msg_send![cls, respondsToSelector: sel!(_features)];
+            if !has_features.as_bool() {
+                return;
+            }
+            let config: *mut AnyObject = msg_send![webview, configuration];
+            let prefs: *mut AnyObject = msg_send![config, preferences];
+            let can_set: Bool = msg_send![prefs, respondsToSelector: sel!(_setEnabled:forFeature:)];
+            if prefs.is_null() || !can_set.as_bool() {
+                return;
+            }
+            let features: *mut AnyObject = msg_send![cls, _features];
+            if features.is_null() {
+                return;
+            }
+            let count: usize = msg_send![features, count];
+            for i in 0..count {
+                let feature: *mut AnyObject = msg_send![features, objectAtIndex: i];
+                let key: *mut NSString = msg_send![feature, key];
+                if !key.is_null() && (*key).to_string() == "PreferPageRenderingUpdatesNear60FPSEnabled" {
+                    let _: () = msg_send![prefs, _setEnabled: Bool::NO, forFeature: feature];
+                }
+            }
+        }
+    });
+}

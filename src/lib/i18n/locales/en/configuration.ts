@@ -1,0 +1,73 @@
+/** English strings: configuration. Source of truth for every other locale. */
+export default {
+  appearance: {
+    title: "Appearance",
+    theme: "Theme",
+    themes: {
+      auto: "Auto",
+      light: "Light",
+      dark: "Dark",
+    },
+    pillLook: "Pill look",
+    pillLookSub: "Standard follows the theme. Onyx is always a solid black capsule.",
+    skins: {
+      standard: "Standard",
+    },
+    recordingWindow: "Recording window",
+    styles: {
+      classic: "Classic",
+      mini: "Mini",
+      none: "None",
+    },
+    alwaysShow: "Always show",
+    alwaysShowInfo: "Keep the pill on screen when you're not recording. When off, it appears only while recording or transcribing.",
+    position: "Position",
+    positionSub: "Where the pill lives on screen. You can still drag it anywhere.",
+    positions: {
+      top: "Top",
+      bottom: "Bottom",
+    },
+  },
+  shortcuts: {
+    title: "Keyboard Shortcuts",
+    toggle: "Toggle Recording",
+    toggleSub: "Starts and stops recordings",
+    cancel: "Cancel Recording",
+    cancelSub: "Discards the active recording",
+    mode: "Change mode",
+    modeSub: "Switches to the next mode",
+    ptt: "Push to Talk",
+    pttSub: "Hold to record, release when done",
+    mouse: "Mouse shortcut",
+    mouseSub: "Tap to toggle, or hold and release when done",
+    tip: "Tip: tap a modifier alone (like Right {cmd}) to record a single-key shortcut. Press {delete} while recording to clear one.",
+  },
+  general: {
+    title: "General",
+    language: "Language",
+    languageSub: "Used for menus, the pill and messages.",
+    autoPaste: "Paste automatically",
+    autoPasteSub: "Types the transcript into the focused app ({keys}). It's always copied to the clipboard too.",
+    saveHistory: "Save history",
+    saveHistorySub: "Keep a local list of your transcripts. Nothing leaves this computer.",
+  },
+  recorder: {
+    needsAccessibility: "Needs Accessibility",
+    resetTitle: "Reset to default",
+    resetLabel: "Reset shortcut",
+    clickToRecord: "Click to record a shortcut",
+    pressButton: "Press a button…",
+    pressKeys: "Press keys…",
+    placeholder: "Record shortcut",
+    pressMouseButton: "Press the mouse button you want to use",
+    combineModifier: "Combine the modifier with another key",
+    /** {mods} lists the modifier keys: "⌘ ⌥ ⌃ ⇧" on macOS, "Ctrl, Alt, Shift, Win" on Windows. */
+    addModifier: "Add a modifier ({mods})",
+  },
+  mouseButtons: {
+    middle: "Middle click",
+    back: "Back button",
+    forward: "Forward button",
+    other: "Button {n}",
+  },
+} as const;

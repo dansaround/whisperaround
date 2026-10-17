@@ -1,0 +1,2 @@
+/* Microphone permission prompt. */
+"NSMicrophoneUsageDescription" = "WhisperAround nimmt deine Stimme auf, während du diktierst, um sie in Text umzuwandeln.";

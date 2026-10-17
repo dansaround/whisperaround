@@ -7,7 +7,21 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { getVersion } from "@tauri-apps/api/app";
-import type { AppStatus, Permissions, SettingsView, SettingsUpdate, StatusEvent } from "./types";
+import type {
+  AppStatus,
+  History,
+  HistoryEntry,
+  InputDevice,
+  LocalModel,
+  ModelDownload,
+  Permissions,
+  SettingsPatch,
+  SettingsView,
+  SoundName,
+  StartSound,
+  StatusEvent,
+  WindowMaterial,
+} from "./types";
 
 /**
  * Whether the Tauri runtime is present. When running the Vite dev server in a
@@ -17,16 +31,87 @@ import type { AppStatus, Permissions, SettingsView, SettingsUpdate, StatusEvent 
 const IN_TAURI =
   typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 
+/**
+ * The browser UI preview can pose as another platform with
+ * `?platform=windows` / `?platform=mac`.
+ */
+const PREVIEW_PLATFORM = IN_TAURI || typeof location === "undefined" ? null : new URLSearchParams(location.search).get("platform");
+
 /** Running on macOS (WKWebView reports "Macintosh"). */
-export const IS_MAC = typeof navigator !== "undefined" && /Mac/.test(navigator.userAgent);
+export const IS_MAC = PREVIEW_PLATFORM
+  ? PREVIEW_PLATFORM === "mac"
+  : typeof navigator !== "undefined" && /Mac/.test(navigator.userAgent);
+/** Running on Windows (WebView2 reports "Windows NT"). */
+export const IS_WINDOWS = PREVIEW_PLATFORM
+  ? PREVIEW_PLATFORM === "windows"
+  : typeof navigator !== "undefined" && /Windows/.test(navigator.userAgent);
+/**
+ * Single-modifier and mouse-button shortcuts (`mod:` / `mouse:` bindings)
+ * have a native backend here (`native_input` in the Rust crate).
+ */
+export const NATIVE_SHORTCUTS = IS_MAC || IS_WINDOWS;
+
+// --- Browser preview mocks ----------------------------------------------------
 
 /** Mock settings used only for the browser UI preview. */
-const previewSettings: SettingsView = {
-  apiKeyConfigured: false,
+let previewSettings: SettingsView = {
+  apiKeyConfigured: true,
   model: "gpt-4o-mini-transcribe",
-  shortcut: "CmdOrCtrl+Shift+X",
+  language: "",
+  shortcut: "mod:MetaRight",
+  cancelShortcut: "Escape",
+  modeShortcut: "Alt+Shift+KeyK",
+  pttShortcut: "",
+  mouseShortcut: "",
   autoPaste: true,
+  theme: "auto",
+  pillStyle: "mini",
+  pillAlwaysShow: true,
+  pillPosition: "top",
+  pillSkin: "standard",
+  soundsEnabled: true,
+  soundVolume: 0.6,
+  startSound: "orus",
+  vocabulary: ["WhisperAround", "Tauri", "Svelte"],
+  modes: [
+    { id: "default", name: "Default", icon: "sparkle", model: "gpt-4o-mini-transcribe", language: "" },
+    { id: "message", name: "Message", icon: "message", model: "gpt-4o-transcribe", language: "es" },
+    { id: "local", name: "Local", icon: "laptop", model: "local:small", language: "" },
+  ],
+  activeMode: "default",
+  inputDevice: "",
+  saveHistory: true,
+  uiLanguage: new URLSearchParams(location.search).get("lang") ?? "en",
 };
+
+function previewHistory(): History {
+  const now = Date.now();
+  const samples = [
+    "Recuérdame revisar el pull request de la pill antes de la reunión de mañana.",
+    "Hey! I just pushed the new settings window, let me know what you think about the animations.",
+    "La idea es que el panel de configuración se sienta nativo, con transiciones suaves y sonidos sutiles.",
+    "Send the invoice to Marta and copy finance on the thread.",
+    "Necesitamos probar el atajo de push to talk con la tecla comando derecha.",
+  ];
+  const apps = IS_WINDOWS
+    ? ["Slack", "Notepad", "Outlook", "Cursor", "WhatsApp"]
+    : ["Slack", "Notes", "Mail", "Cursor", "Messages"];
+  const entries: HistoryEntry[] = samples.map((text, i) => ({
+    id: now - i * 5_400_000,
+    ts: now - i * 5_400_000 - (i > 2 ? 86_400_000 : 0),
+    text,
+    words: text.split(/\s+/).length,
+    durationMs: 3_000 + i * 1_700,
+    model: i % 2 ? "gpt-4o-transcribe" : "gpt-4o-mini-transcribe",
+    mode: i % 2 ? "Message" : "Default",
+    app: apps[i],
+  }));
+  entries.reverse();
+  return { entries, stats: { words: 102_865, audioMs: 49_400_000, sessions: 4_210, apps } };
+}
+let previewHist = previewHistory();
+const previewSettingsListeners = new Set<(v: SettingsView) => void>();
+const previewHistoryListeners = new Set<() => void>();
 
 /** Browser preview only: a fake pipeline so the pill's states can be seen. */
 let previewStatus: AppStatus = "idle";
@@ -46,6 +131,8 @@ function previewEmit(status: AppStatus) {
 }
 let previewLevelTimer: ReturnType<typeof setInterval> | undefined;
 const previewLevelListeners = new Set<(level: number) => void>();
+
+// --- Pipeline -----------------------------------------------------------------
 
 /** Read the current pipeline status (used to seed the UI on mount). */
 export function getStatus(): Promise<AppStatus> {
@@ -67,23 +154,13 @@ export function toggleRecording(): Promise<void> {
   return invoke("toggle_recording");
 }
 
-/** Load the current settings (API key returned only as a boolean flag). */
-export function loadSettings(): Promise<SettingsView> {
-  if (!IN_TAURI) return Promise.resolve(previewSettings);
-  return invoke<SettingsView>("load_settings");
-}
-
-/** Persist settings. Returns the refreshed view. */
-export function saveSettings(update: SettingsUpdate): Promise<SettingsView> {
+/** Discard the current recording. */
+export function cancelRecording(): Promise<void> {
   if (!IN_TAURI) {
-    return Promise.resolve({
-      apiKeyConfigured: update.openaiApiKey.trim().length > 0 || previewSettings.apiKeyConfigured,
-      model: update.model,
-      shortcut: update.shortcut,
-      autoPaste: update.autoPaste,
-    });
+    if (previewStatus === "recording") previewEmit("idle");
+    return Promise.resolve();
   }
-  return invoke<SettingsView>("save_settings", { update });
+  return invoke("cancel_recording");
 }
 
 /** Subscribe to backend status changes. Returns an unlisten function. */
@@ -104,6 +181,195 @@ export function onLevel(handler: (level: number) => void): Promise<UnlistenFn> {
   return listen<number>("level", (event) => handler(event.payload));
 }
 
+// --- Settings -----------------------------------------------------------------
+
+/** Load the current settings (API key returned only as a boolean flag). */
+export function loadSettings(): Promise<SettingsView> {
+  if (!IN_TAURI) return Promise.resolve(structuredClone(previewSettings));
+  return invoke<SettingsView>("load_settings");
+}
+
+/** Apply a partial update and persist it. Returns the refreshed view. */
+export function updateSettings(patch: SettingsPatch): Promise<SettingsView> {
+  if (!IN_TAURI) {
+    const { openaiApiKey, ...rest } = patch;
+    previewSettings = { ...previewSettings, ...rest };
+    if (openaiApiKey?.trim()) previewSettings.apiKeyConfigured = true;
+    const active = previewSettings.modes.find((m) => m.id === previewSettings.activeMode) ?? previewSettings.modes[0];
+    previewSettings.activeMode = active.id;
+    previewSettings.model = active.model;
+    previewSettings.language = active.language;
+    const view = structuredClone(previewSettings);
+    previewSettingsListeners.forEach((fn) => fn(view));
+    return Promise.resolve(view);
+  }
+  return invoke<SettingsView>("update_settings", { patch });
+}
+
+/** Settings saved from any window (or a mode switched by shortcut). */
+export function onSettingsChanged(handler: (v: SettingsView) => void): Promise<UnlistenFn> {
+  if (!IN_TAURI) {
+    previewSettingsListeners.add(handler);
+    return Promise.resolve(() => previewSettingsListeners.delete(handler));
+  }
+  return listen<SettingsView>("settings-changed", (event) => handler(event.payload));
+}
+
+/** The "Change mode" shortcut switched modes (payload: new mode name). */
+export function onModeChanged(handler: (name: string) => void): Promise<UnlistenFn> {
+  if (!IN_TAURI) return Promise.resolve(() => {});
+  return listen<string>("mode-changed", (event) => handler(event.payload));
+}
+
+/** Update only the active mode's transcription model (pill model dropdown). */
+export function setModel(model: string): Promise<void> {
+  if (!IN_TAURI) {
+    const modes = previewSettings.modes.map((m) => (m.id === previewSettings.activeMode ? { ...m, model } : m));
+    return updateSettings({ modes }).then(() => {});
+  }
+  return invoke("set_model", { model });
+}
+
+/** Mute every binding while the settings window records a new shortcut. */
+export function beginShortcutCapture(): Promise<void> {
+  if (!IN_TAURI) return Promise.resolve();
+  return invoke("begin_shortcut_capture");
+}
+
+export function endShortcutCapture(): Promise<void> {
+  if (!IN_TAURI) return Promise.resolve();
+  return invoke("end_shortcut_capture");
+}
+
+/** Available microphones (default first). */
+export function listInputDevices(): Promise<InputDevice[]> {
+  if (!IN_TAURI)
+    return Promise.resolve([
+      { name: IS_WINDOWS ? "Microphone Array (Realtek(R) Audio)" : "MacBook Pro Microphone", isDefault: true },
+      { name: "AirPods Pro", isDefault: false },
+      { name: "Shure MV7", isDefault: false },
+    ]);
+  return invoke<InputDevice[]>("list_input_devices");
+}
+
+/** Audition a sound effect (`startSound` picks the start cue). */
+export function previewSound(startSound: StartSound, sound: SoundName, volume: number): Promise<void> {
+  if (!IN_TAURI) return Promise.resolve();
+  return invoke("preview_sound", { startSound, sound, volume });
+}
+
+// --- History ------------------------------------------------------------------
+
+export function getHistory(): Promise<History> {
+  if (!IN_TAURI) return Promise.resolve(structuredClone(previewHist));
+  return invoke<History>("get_history");
+}
+
+export function deleteHistoryEntry(id: number): Promise<void> {
+  if (!IN_TAURI) {
+    previewHist.entries = previewHist.entries.filter((e) => e.id !== id);
+    previewHistoryListeners.forEach((fn) => fn());
+    return Promise.resolve();
+  }
+  return invoke("delete_history_entry", { id });
+}
+
+export function clearHistory(): Promise<void> {
+  if (!IN_TAURI) {
+    previewHist.entries = [];
+    previewHistoryListeners.forEach((fn) => fn());
+    return Promise.resolve();
+  }
+  return invoke("clear_history");
+}
+
+/** A transcription finished or the history was edited. */
+export function onHistory(handler: () => void): Promise<UnlistenFn> {
+  if (!IN_TAURI) {
+    previewHistoryListeners.add(handler);
+    return Promise.resolve(() => previewHistoryListeners.delete(handler));
+  }
+  return listen("history", () => handler());
+}
+
+// --- Downloadable local models ----------------------------------------------
+
+/** Browser preview only: a fake 1.6 GB download. */
+let previewLocal: LocalModel[] = [{ id: "local:turbo", size: 1_613_977_880, downloaded: false, downloading: false }];
+let previewDownloadTimer: ReturnType<typeof setInterval> | undefined;
+const previewLocalListeners = new Set<() => void>();
+const previewDownloadListeners = new Set<(p: ModelDownload) => void>();
+function setPreviewLocal(id: string, change: Partial<LocalModel>) {
+  previewLocal = previewLocal.map((m) => (m.id === id ? { ...m, ...change } : m));
+  previewLocalListeners.forEach((fn) => fn());
+}
+
+/** Models downloaded on request that this machine can run, and their state. */
+export function localModels(): Promise<LocalModel[]> {
+  if (!IN_TAURI) return Promise.resolve(structuredClone(previewLocal));
+  return invoke<LocalModel[]>("local_models");
+}
+
+/** Install the engine and download a model (progress on `onModelDownload`). */
+export function downloadModel(model: string): Promise<void> {
+  if (!IN_TAURI) {
+    const total = previewLocal.find((m) => m.id === model)?.size ?? 0;
+    let received = 0;
+    setPreviewLocal(model, { downloading: true });
+    previewDownloadListeners.forEach((fn) => fn({ id: model, phase: "engine", received, total }));
+    return new Promise((resolve, reject) => {
+      setTimeout(() => {
+        previewDownloadTimer = setInterval(() => {
+          received = Math.min(total, received + total / 60);
+          previewDownloadListeners.forEach((fn) => fn({ id: model, phase: "model", received, total }));
+          if (received >= total) {
+            clearInterval(previewDownloadTimer);
+            setPreviewLocal(model, { downloading: false, downloaded: true });
+            resolve();
+          }
+        }, 100);
+      }, 1500);
+      previewCancel = () => {
+        clearInterval(previewDownloadTimer);
+        setPreviewLocal(model, { downloading: false });
+        reject(DOWNLOAD_CANCELLED);
+      };
+    });
+  }
+  return invoke("download_model", { model });
+}
+let previewCancel = () => {};
+
+/** Error text of a download cancelled on purpose (`downloads::CANCELLED` in Rust). Not user-facing. */
+export const DOWNLOAD_CANCELLED = "download-cancelled";
+
+export function cancelModelDownload(): Promise<void> {
+  if (!IN_TAURI) {
+    previewCancel();
+    return Promise.resolve();
+  }
+  return invoke("cancel_model_download");
+}
+
+/** A download started or ended (in any window). */
+export function onLocalModelsChanged(handler: () => void): Promise<UnlistenFn> {
+  if (!IN_TAURI) {
+    previewLocalListeners.add(handler);
+    return Promise.resolve(() => previewLocalListeners.delete(handler));
+  }
+  return listen("local-models-changed", () => handler());
+}
+
+export function onModelDownload(handler: (p: ModelDownload) => void): Promise<UnlistenFn> {
+  if (!IN_TAURI) {
+    previewDownloadListeners.add(handler);
+    return Promise.resolve(() => previewDownloadListeners.delete(handler));
+  }
+  return listen<ModelDownload>("model-download", (event) => handler(event.payload));
+}
+
+// --- Platform / app -----------------------------------------------------------
+
 /** Version of the system Python 3 (e.g. "Python 3.12.7"), or null if missing. */
 export function checkPython(): Promise<string | null> {
   if (!IN_TAURI) return Promise.resolve(null);
@@ -118,8 +384,17 @@ export function openPythonInstall(): Promise<void> {
 
 /** macOS microphone / Accessibility permissions, or null where none are needed. */
 export function checkPermissions(): Promise<Permissions | null> {
-  if (!IN_TAURI) return Promise.resolve(null);
+  if (!IN_TAURI) return Promise.resolve(IS_MAC ? { microphone: "granted", accessibility: true } : null);
   return invoke<Permissions | null>("check_permissions");
+}
+
+/**
+ * Native backdrop behind the settings window: macOS vibrancy, Windows 11
+ * Mica, or none (the page paints its own opaque background).
+ */
+export function windowMaterial(): Promise<WindowMaterial> {
+  if (!IN_TAURI) return Promise.resolve(IS_MAC ? "vibrancy" : "none");
+  return invoke<WindowMaterial>("window_material");
 }
 
 /** Show the macOS prompt for a permission, or its System Settings pane. */
@@ -130,7 +405,7 @@ export function requestPermission(kind: "microphone" | "accessibility"): Promise
 
 /** Installed app version (e.g. "0.1.5"). */
 export function appVersion(): Promise<string> {
-  if (!IN_TAURI) return Promise.resolve("dev");
+  if (!IN_TAURI) return Promise.resolve("0.2.0");
   return getVersion();
 }
 
@@ -146,28 +421,42 @@ export function installUpdate(): Promise<void> {
   return invoke("install_update");
 }
 
+/** Open the release notes on GitHub. */
+export function openReleases(): Promise<void> {
+  if (!IN_TAURI) {
+    window.open("https://github.com/dansaround/whisperaround/releases", "_blank");
+    return Promise.resolve();
+  }
+  return invoke("open_releases");
+}
+
 /** Dismiss the first-launch welcome window for good. */
 export function finishOnboarding(): Promise<void> {
   if (!IN_TAURI) return Promise.resolve();
   return invoke("finish_onboarding");
 }
 
-/** Update only the transcription model (pill model dropdown). */
-export function setModel(model: string): Promise<void> {
-  if (!IN_TAURI) {
-    previewSettings.model = model;
-    return Promise.resolve();
-  }
-  return invoke("set_model", { model });
-}
+// --- Pill window --------------------------------------------------------------
 
 /**
- * Resize the floating window (logical px), keeping its top-center fixed. The
- * pill sequences these around its morph animations.
+ * Resize the floating window (logical px), keeping its top- or bottom-center
+ * fixed. The pill sequences these around its morph animations.
  */
 export function fitWindow(width: number, height: number): Promise<void> {
   if (!IN_TAURI) return Promise.resolve();
   return invoke("fit_window", { width, height });
+}
+
+/** Let clicks pass through the pill window while the pill is hidden. */
+export function setPillInteractive(interactive: boolean): Promise<void> {
+  if (!IN_TAURI) return Promise.resolve();
+  return invoke("set_pill_interactive", { interactive });
+}
+
+/** The tray asked to reveal the pill (it may be auto-hidden). */
+export function onRevealPill(handler: () => void): Promise<UnlistenFn> {
+  if (!IN_TAURI) return Promise.resolve(() => {});
+  return listen("reveal-pill", () => handler());
 }
 
 /** Open the standalone settings window. */

@@ -133,8 +133,10 @@ deja el texto en el portapapeles, auto-pegándolo (Ctrl/Cmd+V) en la app enfocad
 
 ### Arquitectura
 
-- **Frontend** (`src/`): Svelte + Vite + TypeScript. UI mínima — indicador de
-  estado y pantalla de ajustes. Solo orquesta vía IPC; no toca la API key.
+- **Frontend** (`src/`): Svelte + Vite + TypeScript. La pill flotante, la
+  ventana de ajustes (`src/lib/settings/`: Inicio, Modos, Vocabulario,
+  Configuración, Sonido, Modelos e Historial) y la bienvenida, en 9 idiomas
+  (`src/lib/i18n/`). Solo orquesta vía IPC; no toca la API key.
 - **Backend** (`src-tauri/src/`): Rust. Todo el pipeline crítico:
   - `recorder.rs` — captura nativa del micrófono con `cpal`, encode a WAV con `hound`.
   - `whisper.rs` — POST multipart a `v1/audio/transcriptions` con `reqwest`.
@@ -145,6 +147,16 @@ deja el texto en el portapapeles, auto-pegándolo (Ctrl/Cmd+V) en la app enfocad
   - `settings.rs` — persiste ajustes en el config dir.
   - `secret.rs` — guarda la API key en el llavero del sistema (Credential
     Manager / Keychain).
+  - `shortcuts.rs` — todos los atajos (grabar, cancelar, cambiar de modo,
+    push-to-talk, ratón) en un solo despachador.
+  - `native_input.rs` — atajos de una sola tecla modificadora (p. ej. Ctrl
+    derecho) y botones extra del ratón, con un backend por plataforma:
+    `windows_input.rs` (hooks de bajo nivel de Win32) y `macos_input.rs`
+    (monitores de `NSEvent`).
+  - `sounds.rs`, `history.rs`, `downloads.rs`, `i18n.rs` — sonidos, historial
+    local con estadísticas, descarga de modelos locales y textos del backend.
+  - `win.rs` / `macos.rs` — integración de plataforma (app en primer plano para
+    el historial, Mica en Windows 11, permisos de macOS).
   - `lib.rs` — setup: atajo global, system tray, ventana en background.
 
 La API key de OpenAI nunca se envía al webview; el frontend solo recibe un flag

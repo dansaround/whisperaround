@@ -12,18 +12,20 @@ mod imp {
     use anyhow::{anyhow, Result};
     use keyring::{Entry, Error};
 
+    use crate::i18n::tf;
+
     const SERVICE: &str = "com.whisperaround.app";
     const ACCOUNT: &str = "openai_api_key";
 
     fn entry() -> Result<Entry> {
-        Entry::new(SERVICE, ACCOUNT).map_err(|e| anyhow!("llavero del sistema: {e}"))
+        Entry::new(SERVICE, ACCOUNT).map_err(|e| anyhow!(tf("error.keychain.open", &[("error", &e)])))
     }
 
     pub fn load() -> Result<Option<String>> {
         match entry()?.get_password() {
             Ok(key) => Ok(Some(key)),
             Err(Error::NoEntry) => Ok(None),
-            Err(e) => Err(anyhow!("leyendo la API key del llavero: {e}")),
+            Err(e) => Err(anyhow!(tf("error.keychain.read", &[("error", &e)]))),
         }
     }
 
@@ -37,7 +39,7 @@ mod imp {
         } else {
             entry.set_password(key)
         };
-        result.map_err(|e| anyhow!("guardando la API key en el llavero: {e}"))
+        result.map_err(|e| anyhow!(tf("error.keychain.write", &[("error", &e)])))
     }
 }
 
@@ -45,12 +47,14 @@ mod imp {
 mod imp {
     use anyhow::{anyhow, Result};
 
+    use crate::i18n::t;
+
     pub fn load() -> Result<Option<String>> {
-        Err(anyhow!("sin llavero del sistema en esta plataforma"))
+        Err(anyhow!(t("error.keychain.unavailable")))
     }
 
     pub fn store(_key: &str) -> Result<()> {
-        Err(anyhow!("sin llavero del sistema en esta plataforma"))
+        Err(anyhow!(t("error.keychain.unavailable")))
     }
 }
 

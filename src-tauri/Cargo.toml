@@ -39,10 +39,24 @@ reqwest = { version = "0.12", default-features = false, features = [
 ] }
 tauri-plugin-updater = { version = "2.9", default-features = false, features = ["rustls-tls"] }
 
-# Atomic move+resize of the floating window (avoids a one-frame jump).
 [target.'cfg(windows)'.dependencies]
 keyring = { version = "3", default-features = false, features = ["windows-native"] }
-windows = { version = "0.61", features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging"] }
+# Atomic move+resize of the floating window (avoids a one-frame jump), the
+# low-level input hooks behind single-key / mouse shortcuts and the
+# foreground app name for the history.
+windows = { version = "0.61", features = [
+  "Win32_Foundation",
+  "Win32_Storage_FileSystem",
+  "Win32_System_LibraryLoader",
+  "Win32_System_Threading",
+  "Win32_UI_Input_KeyboardAndMouse",
+  "Win32_UI_WindowsAndMessaging",
+] }
+# Windows build number (Mica needs Windows 11).
+windows-version = "0.1"
+# Launching the app again while it runs opens the settings window instead of
+# starting a second copy (macOS does this natively).
+tauri-plugin-single-instance = "2"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 keyring = { version = "3", default-features = false, features = ["apple-native"] }

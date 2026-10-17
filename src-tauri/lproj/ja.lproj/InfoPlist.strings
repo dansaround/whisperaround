@@ -1,0 +1,2 @@
+/* Microphone permission prompt. */
+"NSMicrophoneUsageDescription" = "WhisperAround は音声入力中にあなたの声を録音し、テキストに変換します。";

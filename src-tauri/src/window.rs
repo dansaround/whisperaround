@@ -2,36 +2,43 @@
 //! IPC commands (`commands.rs`). The `main` window is a single always-on-top
 //! surface that resizes to fit whatever the pill is showing — an empty pill at
 //! rest, the icon row / tooltip on hover, the model menu, the recording state,
-//! or the expanded panel. Resizes keep the top-center fixed so the pill stays
-//! where the user dragged it instead of snapping back to the top.
+//! or the expanded panel. Resizes keep the top-center (or, with the pill at the
+//! bottom of the screen, the bottom-center) fixed so the pill stays where the
+//! user dragged it instead of snapping back.
 
 use tauri::{LogicalSize, PhysicalPosition, WebviewWindow};
 
 /// Resting (empty) pill window size (logical px). Must match `IDLE` in
 /// `src/lib/Pill.svelte`, which drives every other size.
-pub const PILL_SIZE: (f64, f64) = (72.0, 40.0);
-/// Gap between the window and the top edge of the screen (logical px).
-const TOP_MARGIN: f64 = 12.0;
+pub const PILL_SIZE: (f64, f64) = (52.0, 34.0);
+/// Gap between the window and the top/bottom edge of the usable screen area
+/// (logical px).
+const EDGE_MARGIN: f64 = 12.0;
 
-/// Resize and re-pin to the top-center of the active monitor. Used on launch
-/// and when revealing the pill from the tray (a deliberate "reset to top").
-pub fn layout_main(window: &WebviewWindow, size: (f64, f64)) {
+/// Resize and re-pin to the top- or bottom-center of the active monitor's
+/// usable area (below the menu bar / above the Dock). Used on launch, when the
+/// position setting changes and when revealing the pill from the tray.
+pub fn layout_main(window: &WebviewWindow, size: (f64, f64), bottom: bool) {
     let _ = window.set_size(LogicalSize::new(size.0, size.1));
     let Ok(Some(monitor)) = window.current_monitor() else {
         return;
     };
     let scale = monitor.scale_factor();
-    let screen = monitor.size();
-    let origin = monitor.position();
-    let win_w = size.0 * scale;
-    let x = origin.x as f64 + (screen.width as f64 - win_w) / 2.0;
-    let y = origin.y as f64 + TOP_MARGIN * scale;
+    let area = monitor.work_area();
+    let (win_w, win_h) = (size.0 * scale, size.1 * scale);
+    let x = area.position.x as f64 + (area.size.width as f64 - win_w) / 2.0;
+    let y = if bottom {
+        area.position.y as f64 + area.size.height as f64 - win_h - EDGE_MARGIN * scale
+    } else {
+        area.position.y as f64 + EDGE_MARGIN * scale
+    };
     let _ = window.set_position(PhysicalPosition::new(x.round(), y.round()));
 }
 
-/// Resize keeping the top edge and horizontal center fixed (the pill grows
-/// downward and symmetrically), clamped to the monitor.
-pub fn resize_anchored(window: &WebviewWindow, size: (f64, f64)) {
+/// Resize keeping the horizontal center and the top edge (or the bottom edge
+/// when `bottom`) fixed, so the pill grows away from the screen edge it sits
+/// on. Clamped to the monitor.
+pub fn resize_anchored(window: &WebviewWindow, size: (f64, f64), bottom: bool) {
     let (pos, cur) = match (window.outer_position(), window.outer_size()) {
         (Ok(p), Ok(c)) => (p, c),
         _ => {
@@ -45,7 +52,11 @@ pub fn resize_anchored(window: &WebviewWindow, size: (f64, f64)) {
 
     let center_x = pos.x as f64 + cur.width as f64 / 2.0;
     let mut nx = center_x - new_w / 2.0;
-    let mut ny = pos.y as f64;
+    let mut ny = if bottom {
+        pos.y as f64 + cur.height as f64 - new_h
+    } else {
+        pos.y as f64
+    };
 
     // Keep the whole window on the active monitor.
     if let Ok(Some(m)) = window.current_monitor() {
@@ -83,4 +94,24 @@ fn set_bounds(window: &WebviewWindow, x: i32, y: i32, w: i32, h: i32) {
 fn set_bounds(window: &WebviewWindow, x: i32, y: i32, w: i32, h: i32) {
     let _ = window.set_size(tauri::PhysicalSize::new(w as u32, h as u32));
     let _ = window.set_position(PhysicalPosition::new(x, y));
+}
+
+/// Whether the user put the pill at the bottom of the screen.
+pub fn pill_at_bottom(app: &tauri::AppHandle) -> bool {
+    use tauri::Manager;
+    app.state::<crate::state::AppState>()
+        .settings
+        .lock()
+        .unwrap()
+        .pill_position
+        == "bottom"
+}
+
+/// Give the titled windows their title in the current UI language (on launch
+/// and whenever the language changes).
+pub fn localize_titles(app: &tauri::AppHandle) {
+    use tauri::Manager;
+    if let Some(welcome) = app.get_webview_window("welcome") {
+        let _ = welcome.set_title(&crate::i18n::t("window.welcomeTitle"));
+    }
 }

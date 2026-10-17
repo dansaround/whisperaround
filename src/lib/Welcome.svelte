@@ -7,9 +7,23 @@
     openSettings,
     checkPermissions,
     requestPermission,
+    loadSettings,
+    updateSettings,
     IS_MAC,
   } from "./ipc";
   import type { Permissions } from "./types";
+  import { t, setLocale, LOCALES, i18n, type Locale } from "./i18n/index.svelte";
+  import Select from "./settings/ui/Select.svelte";
+
+  /** UI language, seeded from settings; applied immediately and persisted. */
+  let uiLanguage = $state<Locale>(i18n.locale);
+  const languageOptions = LOCALES.map((l) => ({ value: l.code, label: l.label }));
+
+  function chooseLanguage(code: Locale) {
+    uiLanguage = code;
+    setLocale(code);
+    updateSettings({ uiLanguage: code }).catch((e) => console.error("updateSettings failed", e));
+  }
 
   /** `undefined` while checking, `null` if missing, else the version string. */
   let python = $state<string | null | undefined>(undefined);
@@ -47,6 +61,12 @@
   }
 
   onMount(() => {
+    loadSettings()
+      .then((v) => {
+        const code = LOCALES.find((l) => l.code === v.uiLanguage)?.code;
+        if (code) uiLanguage = code;
+      })
+      .catch((e) => console.error("loadSettings failed", e));
     recheck();
     refreshPermissions();
     const timer = setInterval(refreshPermissions, 1500);
@@ -56,24 +76,29 @@
 
 <div class="welcome">
   <header>
-    <h1>Bienvenido a WhisperAround</h1>
-    <p>Dicta en cualquier app: pulsa el atajo, habla y el texto se pega solo.</p>
+    <div class="title-row">
+      <h1>{t("welcome.title")}</h1>
+      <div class="lang" title={t("welcome.language")}>
+        <Select value={uiLanguage} options={languageOptions} onchange={chooseLanguage} variant="ghost" align="right" minWidth={140} />
+      </div>
+    </div>
+    <p>{t("welcome.subtitle")}</p>
   </header>
 
   {#if perms}
     <section class="check" class:ok={perms.microphone === "granted"} class:missing={perms.microphone === "denied"}>
       <div class="check-head">
         <span class="dot" aria-hidden="true"></span>
-        <strong>Micrófono</strong>
+        <strong>{t("welcome.microphone.title")}</strong>
         <span class="state">
-          {#if perms.microphone === "granted"}Permitido{:else if perms.microphone === "denied"}Bloqueado{:else}Sin pedir{/if}
+          {#if perms.microphone === "granted"}{t("welcome.state.granted")}{:else if perms.microphone === "denied"}{t("welcome.state.denied")}{:else}{t("welcome.state.notRequested")}{/if}
         </span>
       </div>
       {#if perms.microphone !== "granted"}
-        <p>Para grabar tu voz. macOS te lo pedirá una vez.</p>
+        <p>{t("welcome.microphone.body")}</p>
         <div class="row">
           <button class="primary" onclick={() => requestPermission("microphone")}>
-            {perms.microphone === "denied" ? "Abrir Ajustes del Sistema" : "Permitir micrófono"}
+            {perms.microphone === "denied" ? t("welcome.microphone.openSystemSettings") : t("welcome.microphone.allow")}
           </button>
         </div>
       {/if}
@@ -82,17 +107,16 @@
     <section class="check" class:ok={perms.accessibility} class:missing={!perms.accessibility}>
       <div class="check-head">
         <span class="dot" aria-hidden="true"></span>
-        <strong>Accesibilidad</strong>
-        <span class="state">{perms.accessibility ? "Permitido" : "Falta"}</span>
+        <strong>{t("welcome.accessibility.title")}</strong>
+        <span class="state">{perms.accessibility ? t("welcome.state.granted") : t("welcome.state.missing")}</span>
       </div>
       {#if !perms.accessibility}
         <p>
-          Para pegar el texto solo (⌘V) en la app que uses. Activa <b>WhisperAround</b> en
-          Ajustes del Sistema › Privacidad y seguridad › Accesibilidad. Sin esto, el texto queda en
-          el portapapeles.
+          {t("welcome.accessibility.bodyBefore")} <b>WhisperAround</b>
+          {t("welcome.accessibility.bodyAfter")}
         </p>
         <div class="row">
-          <button class="primary" onclick={() => requestPermission("accessibility")}>Permitir Accesibilidad</button>
+          <button class="primary" onclick={() => requestPermission("accessibility")}>{t("welcome.accessibility.allow")}</button>
         </div>
       {/if}
     </section>
@@ -103,38 +127,38 @@
       <span class="dot" aria-hidden="true"></span>
       <strong>Python 3</strong>
       <span class="state">
-        {#if python === undefined}Comprobando…{:else if python}{python}{:else}No encontrado{/if}
+        {#if python === undefined}{t("welcome.state.checking")}{:else if python}{python}{:else}{t("welcome.state.notFound")}{/if}
       </span>
     </div>
 
     {#if python === null}
       <p>
-        Los modelos <b>locales</b> (faster-whisper, sin internet ni API key) necesitan Python.
+        {t("welcome.python.neededBefore")} <b>{t("welcome.python.neededBold")}</b> {t("welcome.python.neededAfter")}
         {#if IS_MAC}
-          Instálalo desde python.org (o con <code>brew install python</code>) y luego vuelve a comprobar.
+          {t("welcome.python.installMacBefore")} <code>brew install python</code>{t("welcome.python.installMacAfter")}
         {:else}
-          Instálalo gratis desde la Microsoft Store y luego vuelve a comprobar.
+          {t("welcome.python.installWindows")}
         {/if}
       </p>
       <div class="row">
-        <button class="primary" onclick={install}>{IS_MAC ? "Abrir python.org" : "Abrir Microsoft Store"}</button>
-        <button onclick={recheck}>Volver a comprobar</button>
+        <button class="primary" onclick={install}>{IS_MAC ? t("welcome.python.openPythonOrg") : t("welcome.python.openMicrosoftStore")}</button>
+        <button onclick={recheck}>{t("welcome.python.checkAgain")}</button>
       </div>
       {#if storeOpened}
-        <small>Cuando termine la instalación, pulsa 'Volver a comprobar'.</small>
+        <small>{t("welcome.python.afterInstall")}</small>
       {/if}
     {:else if python}
-      <p>Todo listo para usar los modelos locales.</p>
+      <p>{t("welcome.python.ready")}</p>
     {/if}
   </section>
 
   <p class="note">
-    ¿Prefieres la nube? Los modelos de OpenAI no necesitan Python, solo tu API key en Ajustes.
+    {t("welcome.cloudNote")}
   </p>
 
   <footer>
-    <button onclick={configure}>Abrir ajustes</button>
-    <button class="primary" onclick={finishOnboarding}>Continuar</button>
+    <button onclick={configure}>{t("welcome.openSettings")}</button>
+    <button class="primary" onclick={finishOnboarding}>{t("welcome.continue")}</button>
   </footer>
 </div>
 
@@ -146,6 +170,17 @@
     max-width: 380px;
     margin: 0 auto;
   }
+  .title-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.6rem;
+  }
+  .lang {
+    flex: none;
+    margin: -0.15rem -0.4rem 0 0;
+    font-size: 0.85rem;
+  }
   h1 {
     margin: 0 0 0.3rem;
     font-size: 1.35rem;
@@ -153,7 +188,7 @@
   header p,
   .note {
     margin: 0;
-    color: #a0a0a8;
+    color: var(--text-2);
     font-size: 0.9rem;
   }
   .check {
@@ -162,8 +197,8 @@
     gap: 0.7rem;
     padding: 0.9rem 1rem;
     border-radius: 12px;
-    background: #232329;
-    border: 1px solid #3a3a42;
+    background: var(--surface);
+    border: 1px solid var(--line-strong);
   }
   .check.ok {
     border-color: rgba(74, 222, 128, 0.45);
@@ -174,10 +209,10 @@
   .check p {
     margin: 0;
     font-size: 0.88rem;
-    color: #cfcfd6;
+    color: var(--text);
   }
   .check small {
-    color: #8a8a92;
+    color: var(--text-2);
     font-size: 0.78rem;
   }
   .check-head {
@@ -187,14 +222,14 @@
   }
   .state {
     margin-left: auto;
-    color: #a0a0a8;
+    color: var(--text-2);
     font-size: 0.85rem;
   }
   .dot {
     width: 9px;
     height: 9px;
     border-radius: 50%;
-    background: #6b6b74;
+    background: var(--text-3);
   }
   .ok .dot {
     background: #4ade80;
@@ -211,12 +246,5 @@
   footer {
     justify-content: flex-end;
     margin-top: 0.4rem;
-  }
-  .primary {
-    background-color: #646cff;
-    color: #fff;
-  }
-  .primary:hover {
-    background-color: #7a80ff;
   }
 </style>

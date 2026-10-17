@@ -5,7 +5,13 @@
 	<!-- Merged by Tauri into the macOS bundle's Info.plist. Without it macOS
 	     refuses microphone access to the app. -->
 	<key>NSMicrophoneUsageDescription</key>
-	<string>WhisperAround graba tu voz mientras dictas para transcribirla a texto.</string>
+	<string>WhisperAround records your voice while you dictate so it can turn it into text.</string>
+	<!-- Localized permission prompts live in Resources/<lang>.lproj/InfoPlist.strings
+	     (copied in via bundle.macOS.files in tauri.conf.json). -->
+	<key>CFBundleDevelopmentRegion</key>
+	<string>en</string>
+	<key>CFBundleAllowMixedLocalizations</key>
+	<true/>
 	<!-- Menu-bar app: no Dock icon (the pill + tray icon are the UI). -->
 	<key>LSUIElement</key>
 	<true/>
