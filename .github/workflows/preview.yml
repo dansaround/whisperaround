@@ -1,0 +1,51 @@
+name: Preview build (PR)
+
+# Builds an installer from a pull request so it can be tried before merging.
+# Runs untrusted PR code, so it gets a read-only token, no secrets and no
+# release: the installer is only uploaded as a workflow artifact.
+on:
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: "Pull request number"
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refs/pull/${{ inputs.pr }}/head
+          persist-credentials: false
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install frontend deps
+        run: pnpm install --frozen-lockfile
+
+      # Updater artifacts need the signing key, which this job must not have.
+      - name: Build installer
+        shell: bash
+        run: pnpm tauri build --bundles nsis --config '{"bundle":{"createUpdaterArtifacts":false}}'
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: whisperaround-pr-${{ inputs.pr }}
+          path: src-tauri/target/release/bundle/nsis/*.exe
+          retention-days: 7
