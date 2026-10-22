@@ -461,7 +461,40 @@ pub fn meeting_state(app: AppHandle) -> meeting::MeetingView {
     meeting::snapshot(&app)
 }
 
-/// Save a meeting transcript as Markdown in `<Documents>/WhisperAround` and
+/// The folder meeting transcripts are saved to.
+#[tauri::command]
+pub fn meeting_folder(app: AppHandle) -> Result<String, String> {
+    meeting::export_dir(&app).map(|d| d.to_string_lossy().into_owned())
+}
+
+/// Let the user choose the meetings folder. `None` when the dialog is closed.
+#[tauri::command]
+pub async fn pick_meeting_folder(app: AppHandle) -> Option<String> {
+    use tauri_plugin_dialog::DialogExt;
+    let start = meeting::export_dir(&app).ok().filter(|d| d.is_dir());
+    tauri::async_runtime::spawn_blocking(move || {
+        let mut dialog = app.dialog().file();
+        if let Some(dir) = start {
+            dialog = dialog.set_directory(dir);
+        }
+        dialog.blocking_pick_folder()?.into_path().ok()
+    })
+    .await
+    .ok()
+    .flatten()
+    .map(|p| p.to_string_lossy().into_owned())
+}
+
+/// Open the meetings folder (created if needed) in the file manager.
+#[tauri::command]
+pub fn open_meeting_folder(app: AppHandle) -> Result<(), String> {
+    let dir = meeting::export_dir(&app)?;
+    std::fs::create_dir_all(&dir).map_err(|e| tf("meeting.error.export", &[("error", &e)]))?;
+    meeting::open_path(&dir);
+    Ok(())
+}
+
+/// Save a meeting transcript as Markdown in the meetings folder and
 /// open it. Returns the file's path.
 #[tauri::command]
 pub fn export_meeting(app: AppHandle, file_name: String, content: String) -> Result<String, String> {

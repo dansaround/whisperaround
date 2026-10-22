@@ -67,6 +67,9 @@ let previewSettings: SettingsView = {
   mouseShortcut: "",
   meetingShortcut: "",
   meetingConsent: false,
+  meetingSource: "mix",
+  meetingFolder: "",
+  meetingAutosave: true,
   autoPaste: true,
   theme: "auto",
   pillStyle: "mini",
@@ -333,7 +336,7 @@ export function startMeeting(): Promise<void> {
     setPreviewMeeting({ active: true, finishing: false, startedTs, model: previewSettings.model, segments: [] });
     previewMeetingTimer = setInterval(() => {
       const startMs = Date.now() - startedTs;
-      const both = previewSettings.inputDevice.startsWith("mix:");
+      const both = IS_WINDOWS && previewSettings.meetingSource === "mix";
       const n = previewMeeting.segments.length;
       const segment = {
         startMs,
@@ -358,7 +361,25 @@ export function stopMeeting(): Promise<void> {
   return invoke("stop_meeting");
 }
 
-/** Save `content` as Markdown in the Documents folder and open it. Returns the path. */
+/** The folder meeting transcripts are saved to. */
+export function getMeetingFolder(): Promise<string> {
+  if (!IN_TAURI) return Promise.resolve(previewSettings.meetingFolder || "~/Documents/WhisperAround");
+  return invoke<string>("meeting_folder");
+}
+
+/** Ask the user for the meetings folder; `null` when the dialog is closed. */
+export function pickMeetingFolder(): Promise<string | null> {
+  if (!IN_TAURI) return Promise.resolve("~/Notes/Meetings");
+  return invoke<string | null>("pick_meeting_folder");
+}
+
+/** Open the meetings folder in the file manager. */
+export function openMeetingFolder(): Promise<void> {
+  if (!IN_TAURI) return Promise.resolve();
+  return invoke("open_meeting_folder");
+}
+
+/** Save `content` as Markdown in the meetings folder and open it. Returns the path. */
 export function exportMeeting(fileName: string, content: string): Promise<string> {
   if (!IN_TAURI) {
     const url = URL.createObjectURL(new Blob([content], { type: "text/markdown" }));

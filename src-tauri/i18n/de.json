@@ -97,5 +97,9 @@
   "meeting.me": "Ich",
   "meeting.others": "Andere",
   "meeting.error.chunk": "Ein Teil des Meetings konnte nicht transkribiert werden: {error}",
-  "meeting.error.export": "Meeting konnte nicht gespeichert werden: {error}"
+  "meeting.error.export": "Meeting konnte nicht gespeichert werden: {error}",
+  "meeting.saved": "Meeting gespeichert unter {path}",
+  "meeting.md.name": "Meeting",
+  "meeting.md.duration": "Dauer: {time}",
+  "meeting.md.model": "Modell: {model}"
 }

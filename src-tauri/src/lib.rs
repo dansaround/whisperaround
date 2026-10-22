@@ -48,6 +48,7 @@ pub fn run() {
     }));
     builder
         .plugin(tauri_plugin_clipboard_manager::init())
+        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         // Manage the state up-front (before setup) so the webview can never win
         // a race and invoke a `State<AppState>` command before it exists. Setup
@@ -174,6 +175,9 @@ pub fn run() {
             commands::stop_meeting,
             commands::meeting_state,
             commands::export_meeting,
+            commands::meeting_folder,
+            commands::pick_meeting_folder,
+            commands::open_meeting_folder,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

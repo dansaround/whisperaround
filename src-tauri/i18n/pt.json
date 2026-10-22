@@ -112,5 +112,9 @@
   "meeting.me": "Eu",
   "meeting.others": "Outros",
   "meeting.error.chunk": "Não foi possível transcrever parte da reunião: {error}",
-  "meeting.error.export": "Não foi possível salvar a reunião: {error}"
+  "meeting.error.export": "Não foi possível salvar a reunião: {error}",
+  "meeting.saved": "Reunião salva em {path}",
+  "meeting.md.name": "Reunião",
+  "meeting.md.duration": "Duração: {time}",
+  "meeting.md.model": "Modelo: {model}"
 }

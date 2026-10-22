@@ -97,5 +97,9 @@
   "meeting.me": "나",
   "meeting.others": "상대방",
   "meeting.error.chunk": "회의 일부를 텍스트로 변환할 수 없습니다: {error}",
-  "meeting.error.export": "회의를 저장할 수 없습니다: {error}"
+  "meeting.error.export": "회의를 저장할 수 없습니다: {error}",
+  "meeting.saved": "회의를 {path}에 저장했습니다",
+  "meeting.md.name": "회의",
+  "meeting.md.duration": "길이: {time}",
+  "meeting.md.model": "모델: {model}"
 }

@@ -3,16 +3,35 @@
   import { fade, slide } from "svelte/transition";
   import { cubicInOut } from "svelte/easing";
   import Icon from "../ui/Icon.svelte";
+  import Select from "../ui/Select.svelte";
+  import Toggle from "../ui/Toggle.svelte";
   import { store } from "../store.svelte";
-  import { IS_WINDOWS, exportMeeting, startMeeting, stopMeeting } from "../../ipc";
+  import {
+    IS_WINDOWS,
+    exportMeeting,
+    getMeetingFolder,
+    openMeetingFolder,
+    pickMeetingFolder,
+    startMeeting,
+    stopMeeting,
+  } from "../../ipc";
   import { clock, longClock, meetingFileName, meetingMarkdown, segmentLine } from "../../meeting";
   import { modelLabel } from "../../models";
   import { t } from "../../i18n/index.svelte";
+  import type { MeetingSource } from "../../types";
 
   const v = $derived(store.view!);
   const m = $derived(store.meeting);
   const recording = $derived(m.active && !m.finishing);
-  const mixed = $derived(v.inputDevice.startsWith("mix:"));
+  // System audio can only be captured on Windows.
+  const source = $derived<MeetingSource>(IS_WINDOWS ? v.meetingSource : "mic");
+  const sourceOptions = $derived([
+    { value: "mix" as MeetingSource, label: t("meetings.source.mix") },
+    { value: "system" as MeetingSource, label: t("meetings.source.system") },
+    { value: "mic" as MeetingSource, label: t("meetings.source.mic") },
+  ]);
+  /** Where the transcripts go (the default folder when none was chosen). */
+  let folder = $state("");
   let copied = $state(false);
   let now = $state(Date.now());
 
@@ -22,7 +41,40 @@
     return () => clearInterval(id);
   });
 
-  const hint = $derived(!IS_WINDOWS ? t("meetings.hintMicOnly") : mixed ? t("meetings.hintBoth") : t("meetings.hintSuggestMix"));
+  // Follow the setting, which another window may change too.
+  $effect(() => {
+    void v.meetingFolder;
+    getMeetingFolder()
+      .then((f) => (folder = f))
+      .catch((e) => console.error("getMeetingFolder failed", e));
+  });
+
+  const hint = $derived(
+    !IS_WINDOWS
+      ? t("meetings.hintMicOnly")
+      : source === "mix"
+        ? t("meetings.hintBoth")
+        : source === "system"
+          ? t("meetings.hintSystem")
+          : t("meetings.hintSuggestMix"),
+  );
+
+  async function chooseFolder() {
+    try {
+      const picked = await pickMeetingFolder();
+      if (picked) await store.patch({ meetingFolder: picked });
+    } catch (e) {
+      store.notify(String(e), "error");
+    }
+  }
+
+  async function openFolder() {
+    try {
+      await openMeetingFolder();
+    } catch (e) {
+      store.notify(String(e), "error");
+    }
+  }
 
   function toggle() {
     if (m.active) {
@@ -98,6 +150,42 @@
           <Icon name={m.active ? "x" : "record"} size={14} />
           {m.active ? t("meetings.stop") : t("meetings.start")}
         </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    {#if IS_WINDOWS}
+      <div class="row">
+        <div class="row-text">
+          <strong>{t("meetings.source.title")}</strong>
+          <small>{t("meetings.source.sub")}</small>
+        </div>
+        <div class="control">
+          <Select value={source} options={sourceOptions} align="right" onchange={(meetingSource) => store.patch({ meetingSource })} />
+        </div>
+      </div>
+    {/if}
+    <div class="row">
+      <div class="row-text">
+        <strong>{t("meetings.folder.title")}</strong>
+        <small class="path" title={folder}>{folder}</small>
+      </div>
+      <div class="control buttons">
+        {#if v.meetingFolder}
+          <button class="pill-button" onclick={() => store.patch({ meetingFolder: "" })}>{t("meetings.folder.reset")}</button>
+        {/if}
+        <button class="pill-button" onclick={openFolder}><Icon name="external" size={13} /> {t("meetings.folder.open")}</button>
+        <button class="pill-button" onclick={chooseFolder}><Icon name="folder" size={13} /> {t("meetings.folder.change")}</button>
+      </div>
+    </div>
+    <div class="row">
+      <div class="row-text">
+        <strong>{t("meetings.autosave.title")}</strong>
+        <small>{t("meetings.autosave.sub")}</small>
+      </div>
+      <div class="control">
+        <Toggle label={t("meetings.autosave.title")} checked={v.meetingAutosave} onchange={(c) => store.patch({ meetingAutosave: c })} />
       </div>
     </div>
   </div>
@@ -213,9 +301,15 @@
     opacity: 0.5;
     pointer-events: none;
   }
-  .actions {
+  .actions,
+  .buttons {
     display: inline-flex;
     gap: 8px;
+  }
+  .path {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .list {
     overflow: hidden;

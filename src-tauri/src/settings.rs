@@ -62,6 +62,16 @@ pub struct Settings {
     /// Whether the user acknowledged the recording-consent notice.
     #[serde(default)]
     pub meeting_consent: bool,
+    /// What a meeting records: `mix` (microphone + system audio) | `system` |
+    /// `mic`. The microphone is the one picked for dictation.
+    #[serde(default = "default_meeting_source")]
+    pub meeting_source: String,
+    /// Folder for the meeting transcripts; empty = `<Documents>/WhisperAround`.
+    #[serde(default)]
+    pub meeting_folder: String,
+    /// Save the transcript there as Markdown when a meeting ends.
+    #[serde(default = "default_true")]
+    pub meeting_autosave: bool,
 
     // --- Appearance ---------------------------------------------------------
     /// `auto` | `light` | `dark`.
@@ -150,6 +160,11 @@ fn default_ui_language() -> String {
 fn default_local_device() -> String {
     "auto".into()
 }
+fn default_meeting_source() -> String {
+    // System audio can only be captured on Windows.
+    let source = if cfg!(windows) { "mix" } else { "mic" };
+    source.into()
+}
 fn default_mode_icon() -> String {
     "sparkle".into()
 }
@@ -177,6 +192,9 @@ pub struct SettingsView {
     pub mouse_shortcut: String,
     pub meeting_shortcut: String,
     pub meeting_consent: bool,
+    pub meeting_source: String,
+    pub meeting_folder: String,
+    pub meeting_autosave: bool,
     pub auto_paste: bool,
     pub theme: String,
     pub pill_style: String,
@@ -209,6 +227,9 @@ pub struct SettingsPatch {
     pub mouse_shortcut: Option<String>,
     pub meeting_shortcut: Option<String>,
     pub meeting_consent: Option<bool>,
+    pub meeting_source: Option<String>,
+    pub meeting_folder: Option<String>,
+    pub meeting_autosave: Option<bool>,
     pub auto_paste: Option<bool>,
     pub theme: Option<String>,
     pub pill_style: Option<String>,
@@ -305,6 +326,20 @@ impl Settings {
         next.name.clone()
     }
 
+    /// Recorder source for a meeting (see `recorder::Source::parse`): the
+    /// dictation microphone combined as `meeting_source` says.
+    pub fn meeting_recorder_source(&self) -> String {
+        let mic = match crate::recorder::Source::parse(&self.input_device) {
+            crate::recorder::Source::Mic(name) | crate::recorder::Source::Mix(name) => name,
+            crate::recorder::Source::System => String::new(),
+        };
+        match self.meeting_source.as_str() {
+            "mix" if cfg!(windows) => format!("mix:{mic}"),
+            "system" if cfg!(windows) => "system:".into(),
+            _ => mic,
+        }
+    }
+
     /// Whisper prompt built from the vocabulary: steers spelling of names and
     /// jargon without changing the meaning.
     pub fn vocabulary_prompt(&self) -> Option<String> {
@@ -344,6 +379,19 @@ impl Settings {
         }
         if let Some(v) = patch.meeting_consent {
             self.meeting_consent = v;
+        }
+        if let Some(v) = patch.meeting_source {
+            self.meeting_source = one_of(v, &["mix", "system", "mic"], "meetingSource")?;
+        }
+        if let Some(v) = patch.meeting_folder {
+            let v = v.trim().to_string();
+            if !v.is_empty() && !std::path::Path::new(&v).is_absolute() {
+                return Err(tf("settings.invalidValue", &[("field", &"meetingFolder"), ("value", &v)]));
+            }
+            self.meeting_folder = v;
+        }
+        if let Some(v) = patch.meeting_autosave {
+            self.meeting_autosave = v;
         }
         if let Some(v) = patch.auto_paste {
             self.auto_paste = v;
@@ -426,6 +474,9 @@ impl Settings {
             mouse_shortcut: self.mouse_shortcut.clone(),
             meeting_shortcut: self.meeting_shortcut.clone(),
             meeting_consent: self.meeting_consent,
+            meeting_source: self.meeting_source.clone(),
+            meeting_folder: self.meeting_folder.clone(),
+            meeting_autosave: self.meeting_autosave,
             auto_paste: self.auto_paste,
             theme: self.theme.clone(),
             pill_style: self.pill_style.clone(),
@@ -647,5 +698,31 @@ mod tests {
     fn key_stays_out_of_the_file_when_the_os_store_exists() {
         let disk = serde_json::to_string(&with_key().to_disk()).unwrap();
         assert_eq!(disk.contains(KEY), !secret::AVAILABLE);
+    }
+
+    #[test]
+    fn meeting_source_uses_the_dictation_microphone() {
+        let mut s = Settings::default();
+        s.input_device = "mix:USB Mic".into();
+        s.meeting_source = "mic".into();
+        assert_eq!(s.meeting_recorder_source(), "USB Mic");
+        s.meeting_source = "mix".into();
+        let mix = if cfg!(windows) { "mix:USB Mic" } else { "USB Mic" };
+        assert_eq!(s.meeting_recorder_source(), mix);
+        s.input_device = "system:".into();
+        s.meeting_source = "mic".into();
+        assert_eq!(s.meeting_recorder_source(), "");
+    }
+
+    #[test]
+    fn meeting_folder_must_be_absolute() {
+        let mut s = Settings::default();
+        let relative = SettingsPatch { meeting_folder: Some("notes".into()), ..Default::default() };
+        assert!(s.apply_patch(relative).is_err());
+        let source = SettingsPatch { meeting_source: Some("speakers".into()), ..Default::default() };
+        assert!(s.apply_patch(source).is_err());
+        let reset = SettingsPatch { meeting_folder: Some("  ".into()), ..Default::default() };
+        assert!(s.apply_patch(reset).is_ok());
+        assert!(s.meeting_folder.is_empty());
     }
 }

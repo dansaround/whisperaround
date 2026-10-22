@@ -38,6 +38,10 @@ reqwest = { version = "0.12", default-features = false, features = [
   "rustls-tls",
 ] }
 tauri-plugin-updater = { version = "2.9", default-features = false, features = ["rustls-tls"] }
+# Folder picker for the meeting transcripts.
+tauri-plugin-dialog = "2"
+# Local date and time in the meeting file names.
+chrono = { version = "0.4", default-features = false, features = ["clock"] }
 
 [target.'cfg(windows)'.dependencies]
 keyring = { version = "3", default-features = false, features = ["windows-native"] }

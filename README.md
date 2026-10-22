@@ -53,10 +53,13 @@ inicia desde Ajustes › Reuniones, desde la bandeja o con su propio atajo; la
 píldora muestra un indicador con el tiempo grabado. La primera vez se muestra un
 aviso: avisa a los demás de que grabas. La transcripción avanza mientras hablan
 (por tramos de 30–60 s cortados en pausas, con OpenAI o con un modelo local) y,
-con **Micrófono + audio del sistema**, separa lo que dices tú ('Yo') de lo que
-dicen los demás ('Otros'), con marcas de tiempo. Al terminar se guarda en el
-Historial como reunión; puedes copiarla entera o exportarla como
-`YYYY-MM-DD HH-MM Reunión.md` (se guarda en `Documentos/WhisperAround`).
+en Windows graba por defecto **Micrófono + audio del sistema** (lo eliges en
+Ajustes › Reuniones › Fuente, sin cambiar el micrófono del dictado) y separa lo
+que dices tú ('Yo') de lo que dicen los demás ('Otros'), con marcas de tiempo.
+Al terminar se guarda en el Historial como reunión y, salvo que desactives
+'Guardar automáticamente', como `YYYY-MM-DD HH-MM Reunión.md` en la carpeta que
+elijas (por defecto `Documentos/WhisperAround`). También puedes copiarla entera
+o exportarla a mano.
 
 ### Ajustes
 
@@ -77,7 +80,9 @@ Historial como reunión; puedes copiarla entera o exportarla como
   'Auto' se usa la GPU si esas bibliotecas ya están instaladas y si no, la CPU.
   Si la GPU falla, la app vuelve sola a la CPU y te avisa.
 - **Reuniones:** iniciar/detener el modo reunión, ver la transcripción en vivo,
-  copiarla o exportarla a `.md`.
+  copiarla o exportarla a `.md`. Ahí eliges la fuente (micrófono + audio del
+  sistema, solo audio del sistema o solo micrófono), la carpeta donde se guardan
+  y si se guardan solas al terminar.
 - **Historial:** tus transcripciones con búsqueda (las reuniones aparecen
   marcadas y se pueden exportar). Se guardan solo en tu equipo y puedes
   desactivarlo o borrarlo.
@@ -125,8 +130,8 @@ Resumen para quien vaya a poner su API key (detalle técnico en
   donde dictaste) se guarda en un archivo local; puedes desactivarlo o borrarlo
   en Ajustes › Historial.
 - **El audio del sistema y el modo reunión** solo se capturan mientras grabas
-  (dictado o reunión iniciada por ti). Las reuniones exportadas se guardan en
-  `Documentos/WhisperAround`; nada se sube salvo el audio a OpenAI si usas un
+  (dictado o reunión iniciada por ti). Las reuniones se guardan en la carpeta que
+  elijas (por defecto `Documentos/WhisperAround`); nada se sube salvo el audio a OpenAI si usas un
   modelo de la nube.
 - **Los atajos de una sola tecla o de ratón** usan un hook de teclado de Windows
   que solo se activa si configuras uno de esos atajos. Solo reacciona a Ctrl,

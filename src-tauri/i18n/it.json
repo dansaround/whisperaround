@@ -97,5 +97,9 @@
   "meeting.me": "Io",
   "meeting.others": "Altri",
   "meeting.error.chunk": "Non è stato possibile trascrivere parte della riunione: {error}",
-  "meeting.error.export": "Impossibile salvare la riunione: {error}"
+  "meeting.error.export": "Impossibile salvare la riunione: {error}",
+  "meeting.saved": "Riunione salvata in {path}",
+  "meeting.md.name": "Riunione",
+  "meeting.md.duration": "Durata: {time}",
+  "meeting.md.model": "Modello: {model}"
 }

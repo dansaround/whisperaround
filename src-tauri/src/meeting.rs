@@ -10,7 +10,7 @@
 //! chunker flushes what is left and closes the channel; the transcriber then
 //! drains the queue and records the finished transcript.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::sync::{Arc, Mutex};
@@ -95,6 +95,8 @@ struct Job {
     api_key: String,
     opts: whisper::Options,
     save_history: bool,
+    /// Save the transcript as Markdown in the meetings folder when it ends.
+    autosave: bool,
 }
 
 /// Root-mean-square amplitude.
@@ -293,6 +295,9 @@ fn finish(app: &AppHandle, job: &Job, duration_ms: u64) {
             meeting: true,
         };
         history::record(app, entry, job.save_history);
+        if job.autosave {
+            autosave(app, &view, duration_ms);
+        }
     }
     {
         let state = app.state::<MeetingState>();
@@ -369,10 +374,11 @@ pub fn start(app: &AppHandle) {
     }
 
     sounds::play(app, Sound::Start);
-    let rec = match Recorder::start(&settings.input_device, |_| {}) {
+    let source = settings.meeting_recorder_source();
+    let rec = match Recorder::start(&source, |_| {}) {
         Ok(rec) => rec,
         Err(e) => {
-            let key = if matches!(recorder::Source::parse(&settings.input_device), recorder::Source::Mic(_)) {
+            let key = if matches!(recorder::Source::parse(&source), recorder::Source::Mic(_)) {
                 "error.mic.open"
             } else {
                 "error.recording.failed"
@@ -391,6 +397,7 @@ pub fn start(app: &AppHandle) {
             prompt: settings.vocabulary_prompt(),
         },
         save_history: settings.save_history,
+        autosave: settings.meeting_autosave,
     };
     let stop = Arc::new(AtomicBool::new(false));
     inner.stop = Some(stop.clone());
@@ -441,22 +448,20 @@ fn sanitize_file_name(name: &str) -> String {
     format!("{stem}.md")
 }
 
-/// `<Documents>/WhisperAround`.
-fn export_dir(app: &AppHandle) -> Result<PathBuf, String> {
+/// The folder chosen in the settings, or `<Documents>/WhisperAround`.
+pub fn export_dir(app: &AppHandle) -> Result<PathBuf, String> {
+    let chosen = app.state::<AppState>().settings.lock().unwrap().meeting_folder.clone();
+    if !chosen.is_empty() {
+        return Ok(PathBuf::from(chosen));
+    }
     app.path()
         .document_dir()
         .map(|d| d.join("WhisperAround"))
         .map_err(|e| tf("meeting.error.export", &[("error", &e)]))
 }
 
-/// Save `content` as `file_name` in the export folder, open it with the
-/// default app and return its path.
-pub fn export(app: &AppHandle, file_name: &str, content: &str) -> Result<String, String> {
-    let fail = |e: &dyn std::fmt::Display| tf("meeting.error.export", &[("error", e)]);
-    let dir = export_dir(app)?;
-    std::fs::create_dir_all(&dir).map_err(|e| fail(&e))?;
-    let path = dir.join(sanitize_file_name(file_name));
-    std::fs::write(&path, content).map_err(|e| fail(&e))?;
+/// Open a file or folder with the default app.
+pub fn open_path(path: &Path) {
     let program = if cfg!(windows) {
         "explorer"
     } else if cfg!(target_os = "macos") {
@@ -464,10 +469,76 @@ pub fn export(app: &AppHandle, file_name: &str, content: &str) -> Result<String,
     } else {
         "xdg-open"
     };
-    if let Err(e) = std::process::Command::new(program).arg(&path).spawn() {
-        eprintln!("[whisperaround] opening the exported meeting: {e}");
+    if let Err(e) = std::process::Command::new(program).arg(path).spawn() {
+        eprintln!("[whisperaround] opening {}: {e}", path.display());
     }
+}
+
+/// Write `content` as `file_name` in the meetings folder and return its path.
+fn save(app: &AppHandle, file_name: &str, content: &str) -> Result<PathBuf, String> {
+    let fail = |e: &dyn std::fmt::Display| tf("meeting.error.export", &[("error", e)]);
+    let dir = export_dir(app)?;
+    std::fs::create_dir_all(&dir).map_err(|e| fail(&e))?;
+    let path = dir.join(sanitize_file_name(file_name));
+    std::fs::write(&path, content).map_err(|e| fail(&e))?;
+    Ok(path)
+}
+
+/// Save `content` as `file_name` in the meetings folder, open it with the
+/// default app and return its path.
+pub fn export(app: &AppHandle, file_name: &str, content: &str) -> Result<String, String> {
+    let path = save(app, file_name, content)?;
+    open_path(&path);
     Ok(path.to_string_lossy().into_owned())
+}
+
+/// Local time of a Unix timestamp in ms.
+fn local_time(ts_ms: u64) -> chrono::DateTime<chrono::Local> {
+    use chrono::TimeZone;
+    chrono::Local
+        .timestamp_millis_opt(ts_ms as i64)
+        .single()
+        .unwrap_or_else(chrono::Local::now)
+}
+
+/// `mm:ss`, or `h:mm:ss` from one hour on (like `clock` in `src/lib/meeting.ts`).
+fn clock(ms: u64) -> String {
+    let s = ms / 1000;
+    match s / 3600 {
+        0 => format!("{:02}:{:02}", s / 60, s % 60),
+        h => format!("{h}:{:02}:{:02}", s / 60 % 60, s % 60),
+    }
+}
+
+/// The Markdown file of a finished meeting; mirrors `meetingMarkdown` and
+/// `meetingFileName` in `src/lib/meeting.ts`, which the Export button uses.
+fn markdown(view: &MeetingView, duration_ms: u64) -> (String, String) {
+    let time = local_time(view.started_ts);
+    let name = t("meeting.md.name");
+    let file_name = format!("{} {name}.md", time.format("%Y-%m-%d %H-%M"));
+    // Blank lines between segments, or Markdown would run them into one paragraph.
+    let transcript = format_transcript(&view.segments).replace('\n', "\n\n");
+    let content = [
+        format!("# {} {name} {}", time.format("%Y-%m-%d"), time.format("%H:%M")),
+        String::new(),
+        format!("- {}", tf("meeting.md.duration", &[("time", &clock(duration_ms))])),
+        format!("- {}", tf("meeting.md.model", &[("model", &view.model)])),
+        String::new(),
+        transcript,
+        String::new(),
+    ]
+    .join("\n");
+    (file_name, content)
+}
+
+/// Save a finished meeting in the meetings folder and say where.
+fn autosave(app: &AppHandle, view: &MeetingView, duration_ms: u64) {
+    let (file_name, content) = markdown(view, duration_ms);
+    let notice = match save(app, &file_name, &content) {
+        Ok(path) => tf("meeting.saved", &[("path", &path.display())]),
+        Err(e) => e,
+    };
+    let _ = app.emit("notice", notice);
 }
 
 #[cfg(test)]
@@ -575,4 +646,29 @@ mod tests {
         assert_eq!(sanitize_file_name("  "), "Meeting.md");
         assert_eq!(sanitize_file_name("dir/"), "Meeting.md");
     }
+
+    #[test]
+    fn markdown_has_a_heading_and_one_paragraph_per_segment() {
+        let view = MeetingView {
+            started_ts: 1_700_000_000_000,
+            model: "local:small".into(),
+            segments: vec![
+                Segment { start_ms: 0, end_ms: 1_000, speaker: None, text: "Hola".into() },
+                Segment { start_ms: 65_000, end_ms: 70_000, speaker: None, text: "Chao".into() },
+            ],
+            ..Default::default()
+        };
+        let (file_name, content) = markdown(&view, 70_000);
+        assert!(file_name.ends_with(".md"));
+        assert!(content.starts_with("# "));
+        assert!(content.contains("01:10"));
+        assert!(content.contains("[00:00:00] Hola\n\n[00:01:05] Chao"));
+    }
+
+    #[test]
+    fn clock_switches_to_hours() {
+        assert_eq!(clock(65_000), "01:05");
+        assert_eq!(clock(3_725_000), "1:02:05");
+    }
 }
+

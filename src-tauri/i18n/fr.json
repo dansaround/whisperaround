@@ -97,5 +97,9 @@
   "meeting.me": "Moi",
   "meeting.others": "Autres",
   "meeting.error.chunk": "Une partie de la réunion n’a pas pu être transcrite : {error}",
-  "meeting.error.export": "Impossible d’enregistrer la réunion : {error}"
+  "meeting.error.export": "Impossible d’enregistrer la réunion : {error}",
+  "meeting.saved": "Réunion enregistrée dans {path}",
+  "meeting.md.name": "Réunion",
+  "meeting.md.duration": "Durée : {time}",
+  "meeting.md.model": "Modèle : {model}"
 }

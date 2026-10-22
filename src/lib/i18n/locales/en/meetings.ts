@@ -9,11 +9,13 @@ export default {
   /** {model} is a model name, e.g. "gpt-4o-mini-transcribe". */
   model: "Model: {model}",
   /** Windows, input is not "Microphone + system audio". */
-  hintSuggestMix: "To capture both sides of a call and label who spoke, choose “Microphone + system audio” in the picker at the top.",
+  hintSuggestMix: "Only your microphone is recorded. To capture both sides of a call and label who spoke, choose “Microphone + system audio” as the source below.",
   /** Windows, "Microphone + system audio" is selected. */
   hintBoth: "Recording your microphone and the system audio. Your lines are labeled “Me”, everyone else “Others”.",
   /** macOS and other systems. */
   hintMicOnly: "Only the microphone is recorded.",
+  /** Windows, the source is "System audio only". */
+  hintSystem: "Recording only the system audio: what the others in the call say.",
   me: "Me",
   others: "Others",
   transcript: "Transcript",
@@ -25,6 +27,25 @@ export default {
   exportMd: "Export .md",
   /** {path} is the saved file's full path. */
   exported: "Saved to {path}",
+  source: {
+    title: "Source",
+    sub: "What a meeting records. Dictation keeps the microphone chosen at the top.",
+    mix: "Microphone + system audio",
+    system: "System audio only",
+    mic: "Microphone only",
+  },
+  /** The meetings folder; its path is shown below the title. */
+  folder: {
+    title: "Save to",
+    change: "Change…",
+    open: "Open",
+    /** Go back to Documents/WhisperAround. */
+    reset: "Default",
+  },
+  autosave: {
+    title: "Save automatically",
+    sub: "Save the transcript as .md in this folder when the meeting ends.",
+  },
   consent: {
     title: "Before you record",
     body: "Let everyone in the call know you're recording and transcribing it. Recording people without their consent may be illegal where you live.",

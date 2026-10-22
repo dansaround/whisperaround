@@ -97,5 +97,9 @@
   "meeting.me": "我",
   "meeting.others": "其他人",
   "meeting.error.chunk": "会议的部分内容无法转写：{error}",
-  "meeting.error.export": "无法存储会议：{error}"
+  "meeting.error.export": "无法存储会议：{error}",
+  "meeting.saved": "会议已保存到 {path}",
+  "meeting.md.name": "会议",
+  "meeting.md.duration": "时长：{time}",
+  "meeting.md.model": "模型：{model}"
 }

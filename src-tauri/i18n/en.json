@@ -112,5 +112,9 @@
   "meeting.me": "Me",
   "meeting.others": "Others",
   "meeting.error.chunk": "Part of the meeting couldn't be transcribed: {error}",
-  "meeting.error.export": "Couldn't save the meeting: {error}"
+  "meeting.error.export": "Couldn't save the meeting: {error}",
+  "meeting.saved": "Meeting saved to {path}",
+  "meeting.md.name": "Meeting",
+  "meeting.md.duration": "Duration: {time}",
+  "meeting.md.model": "Model: {model}"
 }

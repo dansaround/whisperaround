@@ -97,5 +97,9 @@
   "meeting.me": "自分",
   "meeting.others": "相手",
   "meeting.error.chunk": "会議の一部を文字起こしできませんでした：{error}",
-  "meeting.error.export": "会議を保存できませんでした：{error}"
+  "meeting.error.export": "会議を保存できませんでした：{error}",
+  "meeting.saved": "会議を {path} に保存しました",
+  "meeting.md.name": "会議",
+  "meeting.md.duration": "時間: {time}",
+  "meeting.md.model": "モデル: {model}"
 }

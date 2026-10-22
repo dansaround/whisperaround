@@ -66,6 +66,12 @@ export interface SettingsView {
   meetingShortcut: string;
   /** The recording-consent notice was acknowledged. */
   meetingConsent: boolean;
+  /** What a meeting records; the microphone is the dictation one. */
+  meetingSource: MeetingSource;
+  /** Folder for the transcripts; empty = `<Documents>/WhisperAround`. */
+  meetingFolder: string;
+  /** Save the transcript there as Markdown when a meeting ends. */
+  meetingAutosave: boolean;
   autoPaste: boolean;
   theme: Theme;
   pillStyle: PillStyle;
@@ -84,6 +90,9 @@ export interface SettingsView {
   uiLanguage: string;
   localDevice: LocalDevice;
 }
+
+/** `mix` = microphone + system audio (Windows only, like `system`). */
+export type MeetingSource = "mix" | "system" | "mic";
 
 /** Partial update; `openaiApiKey` blank = keep the stored key. */
 export type SettingsPatch = Partial<Omit<SettingsView, "apiKeyConfigured" | "model" | "language">> & {
