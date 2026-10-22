@@ -23,6 +23,12 @@
   "error.recording.threadPanicked": "a thread de gravação falhou",
   "error.recording.encode": "Não foi possível codificar o áudio: {error}",
 
+  "error.systemAudio.unsupported": "A captura de áudio do sistema só está disponível no Windows.",
+  "error.systemAudio.open": "Não foi possível capturar o áudio do sistema: {error}",
+  "error.systemAudio.noDevice": "nenhum dispositivo de saída disponível",
+  "error.systemAudio.config": "não foi possível ler as configurações do dispositivo de saída: {error}",
+  "error.systemAudio.silent": "Não havia som no computador.",
+
   "error.autoPaste": "Colagem automática: {error}",
   "error.clipboard": "Erro na área de transferência: {error}",
   "error.paste.accessibility": "O texto está na área de transferência. Para colá-lo automaticamente, ative o WhisperAround em Ajustes do Sistema › Privacidade e Segurança › Acessibilidade.",

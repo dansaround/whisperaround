@@ -23,6 +23,12 @@
   "error.recording.threadPanicked": "el hilo de grabación falló",
   "error.recording.encode": "No se pudo codificar el audio: {error}",
 
+  "error.systemAudio.unsupported": "La captura de audio del sistema solo está disponible en Windows.",
+  "error.systemAudio.open": "No se pudo capturar el audio del sistema: {error}",
+  "error.systemAudio.noDevice": "no hay ningún dispositivo de salida disponible",
+  "error.systemAudio.config": "no se pudo leer la configuración del dispositivo de salida: {error}",
+  "error.systemAudio.silent": "No hay sonido en este equipo.",
+
   "error.autoPaste": "Pegado automático: {error}",
   "error.clipboard": "Error del portapapeles: {error}",
   "error.paste.accessibility": "El texto está en el portapapeles. Para pegarlo automáticamente, activa WhisperAround en Ajustes del Sistema › Privacidad y seguridad › Accesibilidad.",

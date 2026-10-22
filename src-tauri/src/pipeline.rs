@@ -57,12 +57,20 @@ fn start(app: &AppHandle) {
     let on_level = move |level: f32| {
         let _ = level_app.emit("level", level);
     };
+    let source = recorder::Source::parse(&device);
     match recorder::Recorder::start(&device, on_level) {
         Ok(rec) => {
             *state.recorder.lock().unwrap() = Some(rec);
             set_status(app, AppStatus::Recording, None);
         }
-        Err(e) => set_status(app, AppStatus::Error, Some(tf("error.mic.open", &[("error", &e)]))),
+        Err(e) => {
+            let key = if matches!(source, recorder::Source::Mic(_)) {
+                "error.mic.open"
+            } else {
+                "error.recording.failed"
+            };
+            set_status(app, AppStatus::Error, Some(tf(key, &[("error", &e)])));
+        }
     }
 }
 
@@ -87,6 +95,7 @@ fn stop_and_transcribe(app: &AppHandle) {
     sounds::play(app, Sound::Stop);
     set_status(app, AppStatus::Processing, None);
 
+    let source = rec.source().clone();
     let recording = match rec.stop() {
         Ok(r) => r,
         Err(e) => {
@@ -96,13 +105,19 @@ fn stop_and_transcribe(app: &AppHandle) {
     };
 
     // Exact digital silence means the OS handed us a muted stream (on macOS:
-    // microphone permission denied), not a quiet room.
-    if recording.samples.iter().all(|&s| s == 0.0) {
-        set_status(app, AppStatus::Error, Some(t(SILENT_MIC)));
+    // microphone permission denied), not a quiet room. With a mix, a muted mic
+    // is fine as long as the system audio had something.
+    let (silent, message) = match source {
+        recorder::Source::Mic(_) => (recording.mic_is_digital_silence(), SILENT_MIC),
+        recorder::Source::System => (recording.is_digital_silence(), "error.systemAudio.silent"),
+        recorder::Source::Mix(_) => (recording.is_digital_silence(), SILENT_MIC),
+    };
+    if silent {
+        set_status(app, AppStatus::Error, Some(t(message)));
         return;
     }
 
-    let wav = match recorder::encode_wav(&recording) {
+    let wav = match recorder::encode_wav(&recording.mixed()) {
         Ok(w) => w,
         Err(e) => {
             set_status(app, AppStatus::Error, Some(tf("error.recording.encode", &[("error", &e)])));
@@ -110,8 +125,7 @@ fn stop_and_transcribe(app: &AppHandle) {
         }
     };
 
-    let frames = recording.samples.len() / recording.channels.max(1) as usize;
-    let duration_ms = frames as u64 * 1000 / recording.sample_rate.max(1) as u64;
+    let duration_ms = recording.duration_ms();
     let focused_app = state.recording_app.lock().unwrap().take();
     let settings = state.settings.lock().unwrap().clone();
     let model = settings.effective_model().to_string();

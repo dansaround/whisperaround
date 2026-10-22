@@ -4,9 +4,7 @@
   "tray.settings": "设置…",
   "tray.welcome": "欢迎…",
   "tray.quit": "退出 WhisperAround",
-
   "window.welcomeTitle": "欢迎使用 WhisperAround",
-
   "error.mic.open": "麦克风错误：{error}",
   "error.mic.silent": "麦克风未检测到任何声音。请检查系统设置 › 隐私与安全性 › 麦克风。",
   "error.mic.silentMuted": "麦克风未检测到任何声音。请确认麦克风没有被静音。",
@@ -17,12 +15,10 @@
   "error.mic.sampleFormat": "不支持的采样格式：{format}",
   "error.mic.buildStream": "无法打开音频流：{error}",
   "error.mic.startStream": "无法启动音频流：{error}",
-
   "error.recording.failed": "录音错误：{error}",
   "error.recording.threadEnded": "录音线程在启动前已停止",
   "error.recording.threadPanicked": "录音线程已崩溃",
   "error.recording.encode": "无法编码音频：{error}",
-
   "error.autoPaste": "自动粘贴：{error}",
   "error.clipboard": "剪贴板错误：{error}",
   "error.paste.accessibility": "文字已在剪贴板中。若要自动粘贴，请在系统设置 › 隐私与安全性 › 辅助功能中开启 WhisperAround。",
@@ -32,12 +28,10 @@
   "error.paste.modifier": "修饰键：{error}",
   "error.paste.keyV": "V 键：{error}",
   "error.paste.release": "释放修饰键：{error}",
-
   "error.openai.noKey": "未设置 OpenAI API 密钥。请在设置中添加。",
   "error.openai.network": "网络错误：{error}",
   "error.openai.status": "OpenAI 返回 {status}：{body}",
   "error.openai.badResponse": "OpenAI 返回了无效响应：{error}",
-
   "error.local.failed": "本地转写失败：{error}",
   "error.local.notDownloaded": "此模型尚未下载。请在设置 › 模型库中下载。",
   "error.local.workerExited": "faster-whisper 进程意外退出",
@@ -46,24 +40,19 @@
   "error.local.start": "无法启动 faster-whisper：{error}",
   "error.local.noPipe": "无法连接到 faster-whisper 进程",
   "notice.cudaFallback": "GPU（CUDA）失败，改用 CPU：{error}",
-
   "error.python.missing": "本地模型需要 Python 3。{hint}（{error}）",
   "error.python.hintMac": "请从 python.org 或使用 `brew install python` 安装（菜单栏 › 欢迎…）。",
   "error.python.hintWindows": "请从 Microsoft Store 安装（托盘 › 欢迎…）。",
   "error.python.notFound": "未找到 Python",
   "error.python.openPage": "无法打开 Python 下载页面：{error}",
-
   "error.command.spawn": "无法运行 {command}：{error}",
   "error.command.failed": "{command} 失败：{output}",
-
   "error.dataDir": "找不到 App 数据文件夹：{error}",
   "error.configDir": "找不到设置文件夹：{error}",
-
   "error.keychain.open": "钥匙串错误：{error}",
   "error.keychain.read": "无法从钥匙串读取 API 密钥：{error}",
   "error.keychain.write": "无法将 API 密钥存储到钥匙串：{error}",
   "error.keychain.unavailable": "此平台没有系统钥匙串",
-
   "error.download.notDownloadable": "此模型无法下载：{model}",
   "error.download.busy": "已有下载正在进行",
   "error.download.engine": "无法安装 mlx-whisper：{error}",
@@ -72,7 +61,6 @@
   "error.download.open": "无法打开 {path}：{error}",
   "error.download.save": "无法存储模型：{error}",
   "error.download.incomplete": "{file} 下载不完整（{received} / {size} 字节）",
-
   "error.model.notLocal": "不是本地模型：{model}",
   "error.sound.unknown": "未知声音：{sound}",
   "error.permission.unknown": "未知权限：{kind}",
@@ -80,12 +68,10 @@
   "error.update.install": "更新失败：{error}",
   "error.browser.open": "无法打开浏览器：{error}",
   "error.history.save": "无法存储历史记录：{error}",
-
   "settings.invalidValue": "{field} 的值无效：'{value}'",
   "settings.saveFailed": "无法存储设置：{error}",
   "settings.modes.empty": "至少需要一个模式",
   "settings.modes.unnamed": "每个模式都需要名称",
-
   "shortcut.name.toggle": "开始/停止录音",
   "shortcut.name.pushToTalk": "按住说话",
   "shortcut.name.cancel": "取消录音",
@@ -96,5 +82,10 @@
   "shortcut.error.invalidMouseButton": "无效的鼠标按钮：'{button}'",
   "shortcut.error.invalid": "无效的快捷键：'{shortcut}'",
   "shortcut.error.duplicate": "“{name}”与“{other}”使用了相同的快捷键",
-  "shortcut.error.register": "无法注册 '{shortcut}'：{error}"
+  "shortcut.error.register": "无法注册 '{shortcut}'：{error}",
+  "error.systemAudio.unsupported": "系统音频捕获仅在 Windows 上可用。",
+  "error.systemAudio.open": "无法捕获系统音频：{error}",
+  "error.systemAudio.noDevice": "没有可用的输出设备",
+  "error.systemAudio.config": "无法读取输出设备的设置：{error}",
+  "error.systemAudio.silent": "此电脑上没有音频播放。"
 }

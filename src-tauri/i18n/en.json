@@ -23,6 +23,12 @@
   "error.recording.threadPanicked": "the recording thread crashed",
   "error.recording.encode": "Couldn't encode the audio: {error}",
 
+  "error.systemAudio.unsupported": "System audio capture is only available on Windows.",
+  "error.systemAudio.open": "Couldn't capture the system audio: {error}",
+  "error.systemAudio.noDevice": "no output device available",
+  "error.systemAudio.config": "couldn't read the output device's settings: {error}",
+  "error.systemAudio.silent": "No sound was playing on this computer.",
+
   "error.autoPaste": "Auto-paste: {error}",
   "error.clipboard": "Clipboard error: {error}",
   "error.paste.accessibility": "The text is on the clipboard. To paste it automatically, turn on WhisperAround in System Settings › Privacy & Security › Accessibility.",

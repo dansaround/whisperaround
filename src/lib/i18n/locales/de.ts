@@ -103,6 +103,8 @@ const dict: Dict = {
     mic: {
       defaultDevice: "{name} (Standard)",
       systemMicrophone: "Systemmikrofon",
+      systemAudio: "Systemton (Lautsprecher)",
+      micAndSystem: "Mikrofon + Systemton",
     },
     update: {
       button: "Aktualisieren",

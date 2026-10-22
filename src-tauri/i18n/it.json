@@ -4,9 +4,7 @@
   "tray.settings": "Impostazioni…",
   "tray.welcome": "Benvenuto…",
   "tray.quit": "Esci da WhisperAround",
-
   "window.welcomeTitle": "Benvenuto in WhisperAround",
-
   "error.mic.open": "Errore del microfono: {error}",
   "error.mic.silent": "Il microfono non ha captato alcun suono. Controlla Impostazioni di Sistema › Privacy e sicurezza › Microfono.",
   "error.mic.silentMuted": "Il microfono non ha captato alcun suono. Assicurati che non sia silenziato.",
@@ -17,12 +15,10 @@
   "error.mic.sampleFormat": "formato di campionamento non supportato: {format}",
   "error.mic.buildStream": "impossibile aprire il flusso audio: {error}",
   "error.mic.startStream": "impossibile avviare il flusso audio: {error}",
-
   "error.recording.failed": "Errore di registrazione: {error}",
   "error.recording.threadEnded": "il thread di registrazione si è fermato prima di avviarsi",
   "error.recording.threadPanicked": "il thread di registrazione si è arrestato in modo anomalo",
   "error.recording.encode": "Impossibile codificare l’audio: {error}",
-
   "error.autoPaste": "Incolla automaticamente: {error}",
   "error.clipboard": "Errore degli appunti: {error}",
   "error.paste.accessibility": "Il testo è negli appunti. Per incollarlo automaticamente, attiva WhisperAround in Impostazioni di Sistema › Privacy e sicurezza › Accessibilità.",
@@ -32,12 +28,10 @@
   "error.paste.modifier": "tasto modificatore: {error}",
   "error.paste.keyV": "tasto V: {error}",
   "error.paste.release": "rilascio del tasto modificatore: {error}",
-
   "error.openai.noKey": "Chiave API di OpenAI non impostata. Aggiungila nelle Impostazioni.",
   "error.openai.network": "Errore di rete: {error}",
   "error.openai.status": "OpenAI ha risposto {status}: {body}",
   "error.openai.badResponse": "Risposta non valida da OpenAI: {error}",
-
   "error.local.failed": "Trascrizione locale non riuscita: {error}",
   "error.local.notDownloaded": "Questo modello non è ancora stato scaricato. Scaricalo in Impostazioni › Libreria modelli.",
   "error.local.workerExited": "il processo faster-whisper è terminato in modo imprevisto",
@@ -46,24 +40,19 @@
   "error.local.start": "Impossibile avviare faster-whisper: {error}",
   "error.local.noPipe": "Impossibile connettersi al processo faster-whisper",
   "notice.cudaFallback": "GPU (CUDA) non riuscita, utilizzo della CPU: {error}",
-
   "error.python.missing": "I modelli locali richiedono Python 3. {hint} ({error})",
   "error.python.hintMac": "Installalo da python.org o con `brew install python` (barra dei menu › Benvenuto…).",
   "error.python.hintWindows": "Installalo dal Microsoft Store (area di notifica › Benvenuto…).",
   "error.python.notFound": "Python non trovato",
   "error.python.openPage": "Impossibile aprire la pagina di download di Python: {error}",
-
   "error.command.spawn": "Impossibile eseguire {command}: {error}",
   "error.command.failed": "{command} non riuscito: {output}",
-
   "error.dataDir": "Impossibile trovare la cartella dei dati dell’app: {error}",
   "error.configDir": "Impossibile trovare la cartella delle impostazioni: {error}",
-
   "error.keychain.open": "Errore del portachiavi: {error}",
   "error.keychain.read": "Impossibile leggere la chiave API dal portachiavi: {error}",
   "error.keychain.write": "Impossibile salvare la chiave API nel portachiavi: {error}",
   "error.keychain.unavailable": "Nessun portachiavi di sistema su questa piattaforma",
-
   "error.download.notDownloadable": "Questo modello non può essere scaricato: {model}",
   "error.download.busy": "È già in corso un download",
   "error.download.engine": "Impossibile installare mlx-whisper: {error}",
@@ -72,7 +61,6 @@
   "error.download.open": "Impossibile aprire {path}: {error}",
   "error.download.save": "Impossibile salvare il modello: {error}",
   "error.download.incomplete": "Download incompleto di {file} ({received} di {size} byte)",
-
   "error.model.notLocal": "Non è un modello locale: {model}",
   "error.sound.unknown": "Suono sconosciuto: {sound}",
   "error.permission.unknown": "Autorizzazione sconosciuta: {kind}",
@@ -80,12 +68,10 @@
   "error.update.install": "Aggiornamento non riuscito: {error}",
   "error.browser.open": "Impossibile aprire il browser: {error}",
   "error.history.save": "Impossibile salvare la cronologia: {error}",
-
   "settings.invalidValue": "Valore non valido per {field}: '{value}'",
   "settings.saveFailed": "Impossibile salvare le impostazioni: {error}",
   "settings.modes.empty": "Deve esserci almeno una modalità",
   "settings.modes.unnamed": "Ogni modalità deve avere un nome",
-
   "shortcut.name.toggle": "Avvia/interrompi registrazione",
   "shortcut.name.pushToTalk": "Premi per parlare",
   "shortcut.name.cancel": "Annulla registrazione",
@@ -96,5 +82,10 @@
   "shortcut.error.invalidMouseButton": "pulsante del mouse non valido: '{button}'",
   "shortcut.error.invalid": "abbreviazione non valida: '{shortcut}'",
   "shortcut.error.duplicate": "“{name}” usa la stessa abbreviazione di “{other}”",
-  "shortcut.error.register": "Impossibile attivare l’abbreviazione “{shortcut}”: {error}"
+  "shortcut.error.register": "Impossibile attivare l’abbreviazione “{shortcut}”: {error}",
+  "error.systemAudio.unsupported": "La cattura dell'audio di sistema è disponibile solo su Windows.",
+  "error.systemAudio.open": "Impossibile catturare l'audio di sistema: {error}",
+  "error.systemAudio.noDevice": "nessun dispositivo di uscita disponibile",
+  "error.systemAudio.config": "impossibile leggere le impostazioni del dispositivo di uscita: {error}",
+  "error.systemAudio.silent": "Non era in riproduzione alcun suono su questo computer."
 }

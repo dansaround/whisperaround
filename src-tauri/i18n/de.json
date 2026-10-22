@@ -82,5 +82,10 @@
   "shortcut.error.invalidMouseButton": "ungültige Maustaste: '{button}'",
   "shortcut.error.invalid": "ungültiger Kurzbefehl: '{shortcut}'",
   "shortcut.error.duplicate": "„{name}“ verwendet denselben Kurzbefehl wie „{other}“",
-  "shortcut.error.register": "„{shortcut}“ konnte nicht registriert werden: {error}"
+  "shortcut.error.register": "„{shortcut}“ konnte nicht registriert werden: {error}",
+  "error.systemAudio.unsupported": "Systemton-Erfassung ist nur auf Windows verfügbar.",
+  "error.systemAudio.open": "Systemton konnte nicht erfasst werden: {error}",
+  "error.systemAudio.noDevice": "kein Ausgabegerät verfügbar",
+  "error.systemAudio.config": "Einstellungen des Ausgabegeräts konnten nicht gelesen werden: {error}",
+  "error.systemAudio.silent": "Auf diesem Computer war kein Ton zu hören."
 }

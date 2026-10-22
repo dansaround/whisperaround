@@ -4,9 +4,7 @@
   "tray.settings": "Réglages…",
   "tray.welcome": "Bienvenue…",
   "tray.quit": "Quitter WhisperAround",
-
   "window.welcomeTitle": "Bienvenue dans WhisperAround",
-
   "error.mic.open": "Erreur du micro : {error}",
   "error.mic.silent": "Le micro n’a capté aucun son. Vérifiez Réglages Système › Confidentialité et sécurité › Micro.",
   "error.mic.silentMuted": "Le micro n’a capté aucun son. Vérifiez qu’il n’est pas coupé.",
@@ -17,12 +15,10 @@
   "error.mic.sampleFormat": "format d’échantillon non pris en charge : {format}",
   "error.mic.buildStream": "impossible d’ouvrir le flux audio : {error}",
   "error.mic.startStream": "impossible de démarrer le flux audio : {error}",
-
   "error.recording.failed": "Erreur d’enregistrement : {error}",
   "error.recording.threadEnded": "le thread d’enregistrement s’est arrêté avant de démarrer",
   "error.recording.threadPanicked": "le thread d’enregistrement s’est interrompu de façon inattendue",
   "error.recording.encode": "Impossible d’encoder l’audio : {error}",
-
   "error.autoPaste": "Collage automatique : {error}",
   "error.clipboard": "Erreur du presse-papiers : {error}",
   "error.paste.accessibility": "Le texte est dans le presse-papiers. Pour le coller automatiquement, activez WhisperAround dans Réglages Système › Confidentialité et sécurité › Accessibilité.",
@@ -32,12 +28,10 @@
   "error.paste.modifier": "touche de modification : {error}",
   "error.paste.keyV": "touche V : {error}",
   "error.paste.release": "relâchement de la touche de modification : {error}",
-
   "error.openai.noKey": "Clé API OpenAI non définie. Ajoutez-la dans les Réglages.",
   "error.openai.network": "Erreur réseau : {error}",
   "error.openai.status": "OpenAI a répondu {status} : {body}",
   "error.openai.badResponse": "Réponse non valide d’OpenAI : {error}",
-
   "error.local.failed": "Échec de la transcription locale : {error}",
   "error.local.notDownloaded": "Ce modèle n’est pas encore téléchargé. Téléchargez-le dans Réglages › Modèles.",
   "error.local.workerExited": "le processus faster-whisper s’est arrêté de façon inattendue",
@@ -46,24 +40,19 @@
   "error.local.start": "Impossible de démarrer faster-whisper : {error}",
   "error.local.noPipe": "Impossible de se connecter au processus faster-whisper",
   "notice.cudaFallback": "GPU (CUDA) a échoué, utilisation du CPU à la place : {error}",
-
   "error.python.missing": "Les modèles locaux nécessitent Python 3. {hint} ({error})",
   "error.python.hintMac": "Installez-le depuis python.org ou avec `brew install python` (barre des menus › Bienvenue…).",
   "error.python.hintWindows": "Installez-le depuis le Microsoft Store (zone de notification › Bienvenue…).",
   "error.python.notFound": "Python introuvable",
   "error.python.openPage": "Impossible d’ouvrir la page de téléchargement de Python : {error}",
-
   "error.command.spawn": "Impossible d’exécuter {command} : {error}",
   "error.command.failed": "Échec de {command} : {output}",
-
   "error.dataDir": "Dossier des données de l’app introuvable : {error}",
   "error.configDir": "Dossier des réglages introuvable : {error}",
-
   "error.keychain.open": "Erreur du trousseau : {error}",
   "error.keychain.read": "Impossible de lire la clé API dans le trousseau : {error}",
   "error.keychain.write": "Impossible d’enregistrer la clé API dans le trousseau : {error}",
   "error.keychain.unavailable": "Aucun trousseau système sur cette plateforme",
-
   "error.download.notDownloadable": "Ce modèle ne peut pas être téléchargé : {model}",
   "error.download.busy": "Un téléchargement est déjà en cours",
   "error.download.engine": "Impossible d’installer mlx-whisper : {error}",
@@ -72,7 +61,6 @@
   "error.download.open": "Impossible d’ouvrir {path} : {error}",
   "error.download.save": "Impossible d’enregistrer le modèle : {error}",
   "error.download.incomplete": "Téléchargement incomplet de {file} ({received} octets sur {size})",
-
   "error.model.notLocal": "Ce n’est pas un modèle local : {model}",
   "error.sound.unknown": "Son inconnu : {sound}",
   "error.permission.unknown": "Autorisation inconnue : {kind}",
@@ -80,12 +68,10 @@
   "error.update.install": "Échec de la mise à jour : {error}",
   "error.browser.open": "Impossible d’ouvrir le navigateur : {error}",
   "error.history.save": "Impossible d’enregistrer l’historique : {error}",
-
   "settings.invalidValue": "Valeur non valide pour {field} : '{value}'",
   "settings.saveFailed": "Impossible d’enregistrer les réglages : {error}",
   "settings.modes.empty": "Il doit y avoir au moins un mode",
   "settings.modes.unnamed": "Chaque mode doit avoir un nom",
-
   "shortcut.name.toggle": "Démarrer/arrêter l’enregistrement",
   "shortcut.name.pushToTalk": "Appuyer pour parler",
   "shortcut.name.cancel": "Annuler l’enregistrement",
@@ -96,5 +82,10 @@
   "shortcut.error.invalidMouseButton": "bouton de souris non valide : '{button}'",
   "shortcut.error.invalid": "raccourci non valide : '{shortcut}'",
   "shortcut.error.duplicate": "« {name} » utilise le même raccourci que « {other} »",
-  "shortcut.error.register": "Impossible d’activer le raccourci « {shortcut} » : {error}"
+  "shortcut.error.register": "Impossible d’activer le raccourci « {shortcut} » : {error}",
+  "error.systemAudio.unsupported": "La capture audio du système n'est disponible que sur Windows.",
+  "error.systemAudio.open": "Impossible de capturer l'audio du système : {error}",
+  "error.systemAudio.noDevice": "aucun périphérique de sortie disponible",
+  "error.systemAudio.config": "impossible de lire les paramètres du périphérique de sortie : {error}",
+  "error.systemAudio.silent": "Aucun son ne jouait sur cet ordinateur."
 }
