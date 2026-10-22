@@ -72,6 +72,12 @@ pub struct Settings {
     /// Save the transcript there as Markdown when a meeting ends.
     #[serde(default = "default_true")]
     pub meeting_autosave: bool,
+    /// Date order in the meeting file names: `ymd` | `dmy` | `mdy`.
+    #[serde(default = "default_meeting_date_format")]
+    pub meeting_date_format: String,
+    /// Name in the meeting file names; empty = the translated 'Meeting'.
+    #[serde(default)]
+    pub meeting_name: String,
 
     // --- Appearance ---------------------------------------------------------
     /// `auto` | `light` | `dark`.
@@ -160,6 +166,9 @@ fn default_ui_language() -> String {
 fn default_local_device() -> String {
     "auto".into()
 }
+fn default_meeting_date_format() -> String {
+    "ymd".into()
+}
 fn default_meeting_source() -> String {
     // System audio can only be captured on Windows.
     let source = if cfg!(windows) { "mix" } else { "mic" };
@@ -195,6 +204,8 @@ pub struct SettingsView {
     pub meeting_source: String,
     pub meeting_folder: String,
     pub meeting_autosave: bool,
+    pub meeting_date_format: String,
+    pub meeting_name: String,
     pub auto_paste: bool,
     pub theme: String,
     pub pill_style: String,
@@ -230,6 +241,8 @@ pub struct SettingsPatch {
     pub meeting_source: Option<String>,
     pub meeting_folder: Option<String>,
     pub meeting_autosave: Option<bool>,
+    pub meeting_date_format: Option<String>,
+    pub meeting_name: Option<String>,
     pub auto_paste: Option<bool>,
     pub theme: Option<String>,
     pub pill_style: Option<String>,
@@ -393,6 +406,15 @@ impl Settings {
         if let Some(v) = patch.meeting_autosave {
             self.meeting_autosave = v;
         }
+        if let Some(v) = patch.meeting_date_format {
+            self.meeting_date_format = one_of(v, &["ymd", "dmy", "mdy"], "meetingDateFormat")?;
+        }
+        if let Some(v) = patch.meeting_name {
+            if v.chars().any(|c| c.is_control() || "<>:\"/\\|?*".contains(c)) {
+                return Err(tf("settings.invalidValue", &[("field", &"meetingName"), ("value", &v)]));
+            }
+            self.meeting_name = v.trim().chars().take(60).collect();
+        }
         if let Some(v) = patch.auto_paste {
             self.auto_paste = v;
         }
@@ -477,6 +499,8 @@ impl Settings {
             meeting_source: self.meeting_source.clone(),
             meeting_folder: self.meeting_folder.clone(),
             meeting_autosave: self.meeting_autosave,
+            meeting_date_format: self.meeting_date_format.clone(),
+            meeting_name: self.meeting_name.clone(),
             auto_paste: self.auto_paste,
             theme: self.theme.clone(),
             pill_style: self.pill_style.clone(),
@@ -712,6 +736,29 @@ mod tests {
         s.input_device = "system:".into();
         s.meeting_source = "mic".into();
         assert_eq!(s.meeting_recorder_source(), "");
+    }
+
+    #[test]
+    fn meeting_date_format_is_one_of_three() {
+        let mut s = Settings::default();
+        assert_eq!(s.meeting_date_format, "ymd");
+        let bad = SettingsPatch { meeting_date_format: Some("yyyy".into()), ..Default::default() };
+        assert!(s.apply_patch(bad).is_err());
+        let good = SettingsPatch { meeting_date_format: Some("dmy".into()), ..Default::default() };
+        assert!(s.apply_patch(good).is_ok());
+        assert_eq!(s.meeting_date_format, "dmy");
+    }
+
+    #[test]
+    fn meeting_name_refuses_characters_banned_in_file_names() {
+        let mut s = Settings::default();
+        for bad in ["a/b", "a\\b", "a:b", "a*b", "a?b", "a\"b", "a<b", "a>b", "a|b", "a\tb"] {
+            let patch = SettingsPatch { meeting_name: Some(bad.into()), ..Default::default() };
+            assert!(s.apply_patch(patch).is_err(), "{bad}");
+        }
+        let ok = SettingsPatch { meeting_name: Some(" Equipo (ventas) - 1 ".into()), ..Default::default() };
+        assert!(s.apply_patch(ok).is_ok());
+        assert_eq!(s.meeting_name, "Equipo (ventas) - 1");
     }
 
     #[test]

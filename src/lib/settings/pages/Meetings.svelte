@@ -15,10 +15,10 @@
     startMeeting,
     stopMeeting,
   } from "../../ipc";
-  import { clock, longClock, meetingFileName, meetingMarkdown, segmentLine } from "../../meeting";
+  import { FORBIDDEN_NAME_CHARS, clock, longClock, meetingFileName, meetingMarkdown, meetingName, segmentLine } from "../../meeting";
   import { modelLabel } from "../../models";
   import { t } from "../../i18n/index.svelte";
-  import type { MeetingSource } from "../../types";
+  import type { MeetingDateFormat, MeetingSource } from "../../types";
 
   const v = $derived(store.view!);
   const m = $derived(store.meeting);
@@ -30,6 +30,16 @@
     { value: "system" as MeetingSource, label: t("meetings.source.system") },
     { value: "mic" as MeetingSource, label: t("meetings.source.mic") },
   ]);
+  const dateOptions = [
+    { value: "ymd" as MeetingDateFormat, label: "2026-10-22" },
+    { value: "dmy" as MeetingDateFormat, label: "22-10-2026" },
+    { value: "mdy" as MeetingDateFormat, label: "10-22-2026" },
+  ];
+  /** The name field, saved on blur or Enter so each keystroke is not a save. */
+  let nameDraft = $state("");
+  /** Forbidden characters the user just typed or pasted; they are dropped from the field. */
+  let rejected = $state<string[]>([]);
+  const example = $derived(meetingFileName(Date.now(), v.meetingDateFormat, nameDraft));
   /** Where the transcripts go (the default folder when none was chosen). */
   let folder = $state("");
   let copied = $state(false);
@@ -40,6 +50,25 @@
     const id = setInterval(() => (now = Date.now()), 1000);
     return () => clearInterval(id);
   });
+
+  // Follow the name setting, which another window may change too.
+  $effect(() => {
+    nameDraft = v.meetingName;
+  });
+
+  /** Drop forbidden characters as they are typed or pasted, and say which ones were refused. */
+  function onNameInput(e: Event & { currentTarget: HTMLInputElement }) {
+    const raw = e.currentTarget.value;
+    const found = raw.match(FORBIDDEN_NAME_CHARS) ?? [];
+    nameDraft = raw.replace(FORBIDDEN_NAME_CHARS, "");
+    e.currentTarget.value = nameDraft;
+    rejected = [...new Set(found)];
+  }
+
+  async function saveName() {
+    rejected = [];
+    if (nameDraft.trim() !== v.meetingName) await store.patch({ meetingName: nameDraft.trim() });
+  }
 
   // Follow the setting, which another window may change too.
   $effect(() => {
@@ -103,7 +132,7 @@
 
   async function exportMd() {
     try {
-      const path = await exportMeeting(meetingFileName(m.startedTs), meetingMarkdown(m));
+      const path = await exportMeeting(meetingFileName(m.startedTs, v.meetingDateFormat, v.meetingName), meetingMarkdown(m, v.meetingDateFormat, v.meetingName));
       store.notify(t("meetings.exported", { path }));
     } catch (e) {
       store.notify(String(e), "error");
@@ -191,6 +220,49 @@
   </div>
 
   <section class="section">
+    <h3 class="section-title">{t("meetings.fileName.title")}</h3>
+    <div class="card">
+      <div class="row">
+        <div class="row-text">
+          <strong>{t("meetings.fileName.date.title")}</strong>
+          <small>{t("meetings.fileName.date.sub")}</small>
+        </div>
+        <div class="control">
+          <Select value={v.meetingDateFormat} options={dateOptions} align="right" onchange={(meetingDateFormat) => store.patch({ meetingDateFormat })} />
+        </div>
+      </div>
+      <div class="row">
+        <div class="row-text">
+          <strong>{t("meetings.fileName.name.title")}</strong>
+          <small>{t("meetings.fileName.name.sub")}</small>
+        </div>
+        <div class="control">
+          <input
+            class="name-input"
+            value={nameDraft}
+            placeholder={meetingName("")}
+            maxlength="60"
+            autocomplete="off"
+            spellcheck="false"
+            oninput={onNameInput}
+            onchange={saveName}
+            onkeydown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+          />
+        </div>
+      </div>
+      {#if rejected.length}
+        <small class="warn-text" role="alert">{t("meetings.fileName.forbidden", { chars: rejected.join(" ") })}</small>
+      {/if}
+      <small class="example">{t("meetings.fileName.example", { file: example })}</small>
+    </div>
+  </section>
+
+  <div class="card note">
+    <span class="note-icon"><Icon name="info" size={15} /></span>
+    <small>{t("meetings.disclaimer")}</small>
+  </div>
+
+  <section class="section">
     <div class="page-head">
       <h3 class="section-title">{t("meetings.transcript")}</h3>
       {#if m.segments.length}
@@ -235,6 +307,39 @@
     color: var(--orange);
     display: inline-flex;
     padding-top: 1px;
+  }
+  .name-input {
+    width: 180px;
+  }
+  .warn-text {
+    display: block;
+    padding: 0 16px 8px;
+    color: var(--orange);
+    font-size: 11.5px;
+  }
+  .example {
+    display: block;
+    padding: 0 16px 12px;
+    color: var(--text-3);
+    font-variant-numeric: tabular-nums;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .note {
+    display: flex;
+    gap: 10px;
+    padding: 12px 16px;
+  }
+  .note-icon {
+    color: var(--accent);
+    display: inline-flex;
+    padding-top: 1px;
+  }
+  .note small {
+    color: var(--text-2);
+    font-size: 11.5px;
+    line-height: 1.45;
   }
   .consent-text {
     display: flex;

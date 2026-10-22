@@ -437,6 +437,20 @@ const dict: Dict = {
       title: "Guardar automáticamente",
       sub: "Guarda la transcripción como .md en esta carpeta al terminar la reunión.",
     },
+    disclaimer: "Las transcripciones se guardan automáticamente. Cada reunión se guarda al terminar en el historial y, con 'Guardar automáticamente' activado, también como .md en la carpeta de arriba. Iniciar una nueva reunión no borra las anteriores: aquí solo se muestra la última.",
+    fileName: {
+      title: "Nombre del archivo",
+      date: {
+        title: "Formato de fecha",
+        sub: "Orden de la fecha al inicio del nombre de cada archivo.",
+      },
+      name: {
+        title: "Nombre predeterminado",
+        sub: "Se usa si el campo está vacío.",
+      },
+      forbidden: "No se permiten en nombres de archivo: {chars}",
+      example: "Ejemplo: {file}",
+    },
     consent: {
       title: "Antes de grabar",
       body: "Avisa a todos en la llamada de que la estás grabando y transcribiendo. Grabar a otras personas sin su consentimiento puede ser ilegal donde vives.",

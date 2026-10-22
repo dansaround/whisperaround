@@ -1,6 +1,6 @@
 /** Helpers shared by the Meetings page, the History page and the pill. */
 import { t } from "./i18n/index.svelte";
-import type { HistoryEntry, MeetingSegment, MeetingView } from "./types";
+import type { HistoryEntry, MeetingDateFormat, MeetingSegment, MeetingView } from "./types";
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
@@ -17,15 +17,27 @@ export function longClock(ms: number): string {
   return `${pad(Math.floor(s / 3600))}:${pad(Math.floor(s / 60) % 60)}:${pad(s % 60)}`;
 }
 
-/** Local date as `YYYY-MM-DD`. */
-function dateOf(d: Date): string {
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+/** Local date as `YYYY-MM-DD`, `DD-MM-YYYY` or `MM-DD-YYYY`, as the settings choose. */
+function dateOf(d: Date, format: MeetingDateFormat): string {
+  const y = d.getFullYear();
+  const m = pad(d.getMonth() + 1);
+  const day = pad(d.getDate());
+  return format === "dmy" ? `${day}-${m}-${y}` : format === "mdy" ? `${m}-${day}-${y}` : `${y}-${m}-${day}`;
 }
 
-/** `YYYY-MM-DD HH-MM Meeting.md` in local time. */
-export function meetingFileName(ts: number): string {
+/** Characters Windows and macOS refuse in file names, plus control characters. */
+export const FORBIDDEN_NAME_CHARS = /[<>:"\/\\|?*\x00-\x1f]/g;
+
+/** The name in file names and headings: the setting, or the translated default when blank. */
+export function meetingName(name: string): string {
+  return name.trim() || t("meetings.md.name");
+}
+
+/** `2026-10-22 16-30-05 Meeting.md` in local time. */
+export function meetingFileName(ts: number, format: MeetingDateFormat, name: string): string {
   const d = new Date(ts);
-  return `${dateOf(d)} ${pad(d.getHours())}-${pad(d.getMinutes())} ${t("meetings.md.name")}.md`;
+  const time = `${pad(d.getHours())}-${pad(d.getMinutes())}-${pad(d.getSeconds())}`;
+  return `${dateOf(d, format)} ${time} ${meetingName(name)}.md`;
 }
 
 /** `[hh:mm:ss] Me: text` for one live segment. */
@@ -35,7 +47,7 @@ export function segmentLine(seg: MeetingSegment): string {
 }
 
 /** The Markdown file for a meeting: a history entry or the live/last view. */
-export function meetingMarkdown(source: HistoryEntry | MeetingView): string {
+export function meetingMarkdown(source: HistoryEntry | MeetingView, format: MeetingDateFormat, name: string): string {
   const live = "segments" in source;
   const ts = live ? source.startedTs : source.ts;
   const durationMs = live ? Math.max(0, ...source.segments.map((s) => s.endMs)) : source.durationMs;
@@ -43,7 +55,7 @@ export function meetingMarkdown(source: HistoryEntry | MeetingView): string {
   const transcript = (live ? source.segments.map(segmentLine) : source.text.split("\n")).join("\n\n");
   const d = new Date(ts);
   return [
-    `# ${dateOf(d)} ${t("meetings.md.name")} ${pad(d.getHours())}:${pad(d.getMinutes())}`,
+    `# ${dateOf(d, format)} ${meetingName(name)} ${pad(d.getHours())}:${pad(d.getMinutes())}`,
     "",
     `- ${t("meetings.md.duration", { time: clock(durationMs) })}`,
     `- ${t("meetings.md.model", { model: source.model })}`,

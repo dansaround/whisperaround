@@ -97,6 +97,9 @@ struct Job {
     save_history: bool,
     /// Save the transcript as Markdown in the meetings folder when it ends.
     autosave: bool,
+    /// File name settings, copied when the meeting starts.
+    date_format: String,
+    name: String,
 }
 
 /// Root-mean-square amplitude.
@@ -296,7 +299,7 @@ fn finish(app: &AppHandle, job: &Job, duration_ms: u64) {
         };
         history::record(app, entry, job.save_history);
         if job.autosave {
-            autosave(app, &view, duration_ms);
+            autosave(app, &view, duration_ms, &job.date_format, &job.name);
         }
     }
     {
@@ -398,6 +401,8 @@ pub fn start(app: &AppHandle) {
         },
         save_history: settings.save_history,
         autosave: settings.meeting_autosave,
+        date_format: settings.meeting_date_format.clone(),
+        name: settings.meeting_name.clone(),
     };
     let stop = Arc::new(AtomicBool::new(false));
     inner.stop = Some(stop.clone());
@@ -512,14 +517,18 @@ fn clock(ms: u64) -> String {
 
 /// The Markdown file of a finished meeting; mirrors `meetingMarkdown` and
 /// `meetingFileName` in `src/lib/meeting.ts`, which the Export button uses.
-fn markdown(view: &MeetingView, duration_ms: u64) -> (String, String) {
+fn markdown(view: &MeetingView, duration_ms: u64, date_format: &str, name: &str) -> (String, String) {
     let time = local_time(view.started_ts);
-    let name = t("meeting.md.name");
-    let file_name = format!("{} {name}.md", time.format("%Y-%m-%d %H-%M"));
+    let name = match name.trim() {
+        "" => t("meeting.md.name"),
+        custom => custom.to_string(),
+    };
+    let date = date_text(&time, date_format);
+    let file_name = format!("{date} {} {name}.md", time.format("%H-%M-%S"));
     // Blank lines between segments, or Markdown would run them into one paragraph.
     let transcript = format_transcript(&view.segments).replace('\n', "\n\n");
     let content = [
-        format!("# {} {name} {}", time.format("%Y-%m-%d"), time.format("%H:%M")),
+        format!("# {date} {name} {}", time.format("%H:%M")),
         String::new(),
         format!("- {}", tf("meeting.md.duration", &[("time", &clock(duration_ms))])),
         format!("- {}", tf("meeting.md.model", &[("model", &view.model)])),
@@ -531,9 +540,18 @@ fn markdown(view: &MeetingView, duration_ms: u64) -> (String, String) {
     (file_name, content)
 }
 
+/// The date in a meeting's file name, in the order the settings choose.
+fn date_text(time: &chrono::DateTime<chrono::Local>, format: &str) -> String {
+    match format {
+        "dmy" => time.format("%d-%m-%Y").to_string(),
+        "mdy" => time.format("%m-%d-%Y").to_string(),
+        _ => time.format("%Y-%m-%d").to_string(),
+    }
+}
+
 /// Save a finished meeting in the meetings folder and say where.
-fn autosave(app: &AppHandle, view: &MeetingView, duration_ms: u64) {
-    let (file_name, content) = markdown(view, duration_ms);
+fn autosave(app: &AppHandle, view: &MeetingView, duration_ms: u64, date_format: &str, name: &str) {
+    let (file_name, content) = markdown(view, duration_ms, date_format, name);
     let notice = match save(app, &file_name, &content) {
         Ok(path) => tf("meeting.saved", &[("path", &path.display())]),
         Err(e) => e,
@@ -658,11 +676,32 @@ mod tests {
             ],
             ..Default::default()
         };
-        let (file_name, content) = markdown(&view, 70_000);
+        let (file_name, content) = markdown(&view, 70_000, "ymd", "");
         assert!(file_name.ends_with(".md"));
         assert!(content.starts_with("# "));
         assert!(content.contains("01:10"));
         assert!(content.contains("[00:00:00] Hola\n\n[00:01:05] Chao"));
+    }
+
+    #[test]
+    fn file_name_has_seconds_and_the_chosen_date_and_name() {
+        let view = MeetingView { started_ts: 1_700_000_000_000, ..Default::default() };
+        let (file_name, content) = markdown(&view, 0, "dmy", " Team sync ");
+        assert!(file_name.ends_with(" Team sync.md"), "{file_name}");
+        let stem = file_name.trim_end_matches(" Team sync.md");
+        let parts: Vec<&str> = stem.split(' ').collect();
+        assert_eq!(parts.len(), 2, "{stem}");
+        assert_eq!(parts[0].split('-').map(str::len).collect::<Vec<_>>(), [2, 2, 4]);
+        assert_eq!(parts[1].split('-').map(str::len).collect::<Vec<_>>(), [2, 2, 2]);
+        assert!(content.starts_with("# "));
+        assert!(content.contains(" Team sync "));
+    }
+
+    #[test]
+    fn a_blank_name_falls_back_to_the_translated_default() {
+        let view = MeetingView { started_ts: 1_700_000_000_000, ..Default::default() };
+        let (file_name, _) = markdown(&view, 0, "ymd", "   ");
+        assert!(file_name.ends_with(&format!(" {}.md", t("meeting.md.name"))), "{file_name}");
     }
 
     #[test]

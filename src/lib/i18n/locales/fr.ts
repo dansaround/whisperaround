@@ -441,6 +441,20 @@ const dict: Dict = {
       title: "Enregistrer automatiquement",
       sub: "Enregistre la transcription en .md dans ce dossier à la fin de la réunion.",
     },
+    disclaimer: "Les transcriptions sont enregistrées automatiquement. Chaque réunion est ajoutée à l’historique à la fin et, si « Enregistrer automatiquement » est activé, aussi en .md dans le dossier ci-dessus. Démarrer une nouvelle réunion n’efface pas les précédentes : cette section n’affiche que la dernière.",
+    fileName: {
+      title: "Nom du fichier",
+      date: {
+        title: "Format de la date",
+        sub: "L’ordre de la date au début du nom de chaque fichier.",
+      },
+      name: {
+        title: "Nom par défaut",
+        sub: "Utilisé quand le champ est vide.",
+      },
+      forbidden: "Non autorisés dans les noms de fichier : {chars}",
+      example: "Exemple : {file}",
+    },
     consent: {
       title: "Avant d’enregistrer",
       body: "Prévenez tous les participants que vous enregistrez et transcrivez l’appel. Enregistrer des personnes sans leur consentement peut être illégal là où vous vivez.",

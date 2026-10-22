@@ -72,6 +72,10 @@ export interface SettingsView {
   meetingFolder: string;
   /** Save the transcript there as Markdown when a meeting ends. */
   meetingAutosave: boolean;
+  /** Date order in the meeting file names. */
+  meetingDateFormat: MeetingDateFormat;
+  /** Name in the meeting file names; empty = the translated 'Meeting'. */
+  meetingName: string;
   autoPaste: boolean;
   theme: Theme;
   pillStyle: PillStyle;
@@ -93,6 +97,8 @@ export interface SettingsView {
 
 /** `mix` = microphone + system audio (Windows only, like `system`). */
 export type MeetingSource = "mix" | "system" | "mic";
+/** Date order in meeting file names: `ymd`, `dmy` or `mdy`. */
+export type MeetingDateFormat = "ymd" | "dmy" | "mdy";
 
 /** Partial update; `openaiApiKey` blank = keep the stored key. */
 export type SettingsPatch = Partial<Omit<SettingsView, "apiKeyConfigured" | "model" | "language">> & {

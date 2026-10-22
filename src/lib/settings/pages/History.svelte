@@ -63,7 +63,7 @@
 
   async function exportMd(e: HistoryEntry) {
     try {
-      const path = await exportMeeting(meetingFileName(e.ts), meetingMarkdown(e));
+      const path = await exportMeeting(meetingFileName(e.ts, v.meetingDateFormat, v.meetingName), meetingMarkdown(e, v.meetingDateFormat, v.meetingName));
       store.notify(t("meetings.exported", { path }));
     } catch (err) {
       store.notify(String(err), "error");

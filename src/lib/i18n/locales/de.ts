@@ -437,6 +437,20 @@ const dict: Dict = {
       title: "Automatisch speichern",
       sub: "Speichert das Transkript am Ende des Meetings als .md in diesem Ordner.",
     },
+    disclaimer: "Transkripte werden automatisch gespeichert. Jedes Meeting wird nach dem Ende im Verlauf gespeichert und, wenn 'Automatisch speichern' aktiviert ist, zusätzlich als .md im Ordner oben. Ein neues Meeting zu starten löscht keine früheren Transkripte; dieser Bereich zeigt nur das letzte an.",
+    fileName: {
+      title: "Dateiname",
+      date: {
+        title: "Datumsformat",
+        sub: "Reihenfolge des Datums am Anfang jedes Dateinamens.",
+      },
+      name: {
+        title: "Standardname",
+        sub: "Wird verwendet, wenn das Feld leer ist.",
+      },
+      forbidden: "In Dateinamen nicht erlaubt: {chars}",
+      example: "Beispiel: {file}",
+    },
     consent: {
       title: "Bevor du aufnimmst",
       body: "Sag allen im Anruf, dass du aufnimmst und transkribierst. Menschen ohne ihre Einwilligung aufzunehmen kann bei dir illegal sein.",

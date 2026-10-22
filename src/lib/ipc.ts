@@ -70,6 +70,8 @@ let previewSettings: SettingsView = {
   meetingSource: "mix",
   meetingFolder: "",
   meetingAutosave: true,
+  meetingDateFormat: "ymd",
+  meetingName: "",
   autoPaste: true,
   theme: "auto",
   pillStyle: "mini",

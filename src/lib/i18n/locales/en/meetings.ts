@@ -46,6 +46,20 @@ export default {
     title: "Save automatically",
     sub: "Save the transcript as .md in this folder when the meeting ends.",
   },
+  disclaimer: "Transcripts are saved automatically. Each meeting is saved to your history when it ends and, with “Save automatically” on, as .md in the folder above. Starting a new meeting doesn’t delete earlier transcripts; this section only shows the latest one.",
+  fileName: {
+    title: "File name",
+    date: {
+      title: "Date format",
+      sub: "The order of the date at the start of each file name.",
+    },
+    name: {
+      title: "Default name",
+      sub: "Used when the field is empty.",
+    },
+    forbidden: "Not allowed in file names: {chars}",
+    example: "Example: {file}",
+  },
   consent: {
     title: "Before you record",
     body: "Let everyone in the call know you're recording and transcribing it. Recording people without their consent may be illegal where you live.",

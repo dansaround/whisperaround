@@ -441,6 +441,20 @@ const dict: Dict = {
       title: "Salva automaticamente",
       sub: "Salva la trascrizione come .md in questa cartella al termine della riunione.",
     },
+    disclaimer: "Le trascrizioni vengono salvate automaticamente. Ogni riunione viene salvata nella cronologia al termine e, con 'Salva automaticamente' attivo, anche come .md nella cartella sopra. Avviare una nuova riunione non cancella le trascrizioni precedenti: qui si mostra solo l’ultima.",
+    fileName: {
+      title: "Nome del file",
+      date: {
+        title: "Formato della data",
+        sub: "Ordine della data all’inizio del nome di ogni file.",
+      },
+      name: {
+        title: "Nome predefinito",
+        sub: "Usato se il campo è vuoto.",
+      },
+      forbidden: "Non consentiti nei nomi di file: {chars}",
+      example: "Esempio: {file}",
+    },
     consent: {
       title: "Prima di registrare",
       body: "Avvisa tutti i partecipanti che stai registrando e trascrivendo la chiamata. Registrare le persone senza il loro consenso può essere illegale dove vivi.",
