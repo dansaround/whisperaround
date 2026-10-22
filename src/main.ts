@@ -7,7 +7,11 @@ function showFatal(label: string, err: unknown) {
   const msg = err instanceof Error ? `${err.name}: ${err.message}\n${err.stack ?? ""}` : String(err);
   const el = document.getElementById("app");
   if (el) {
-    el.innerHTML = `<pre style="color:#f87171;background:#1b1b1f;padding:16px;margin:0;white-space:pre-wrap;font:13px monospace;height:100vh;overflow:auto">[${label}]\n${msg}</pre>`;
+    // Text only: the message may contain markup.
+    const pre = document.createElement("pre");
+    pre.style.cssText = "color:#f87171;background:#1b1b1f;padding:16px;margin:0;white-space:pre-wrap;font:13px monospace;height:100vh;overflow:auto";
+    pre.textContent = `[${label}]\n${msg}`;
+    el.replaceChildren(pre);
   }
   console.error(`[${label}]`, err);
 }
