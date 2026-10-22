@@ -43,6 +43,21 @@ reloj). Pasa el ratón por encima para ver sus botones y arrástrala desde
 cualquier parte que no sea un botón. Desde la bandeja puedes abrir Ajustes o
 salir; abrir la app otra vez también abre Ajustes.
 
+**Audio del sistema (Windows):** en el selector de micrófono (arriba en Ajustes)
+puedes elegir **Audio del sistema (altavoces)** para transcribir lo que suena en
+el equipo (un vídeo, una llamada) o **Micrófono + audio del sistema** para
+ambos a la vez.
+
+**Modo reunión:** para transcribir una videollamada larga sin pegar nada. Se
+inicia desde Ajustes › Reuniones, desde la bandeja o con su propio atajo; la
+píldora muestra un indicador con el tiempo grabado. La primera vez se muestra un
+aviso: avisa a los demás de que grabas. La transcripción avanza mientras hablan
+(por tramos de 30–60 s cortados en pausas, con OpenAI o con un modelo local) y,
+con **Micrófono + audio del sistema**, separa lo que dices tú ('Yo') de lo que
+dicen los demás ('Otros'), con marcas de tiempo. Al terminar se guarda en el
+Historial como reunión; puedes copiarla entera o exportarla como
+`YYYY-MM-DD HH-MM Reunión.md` (se guarda en `Documentos/WhisperAround`).
+
 ### Ajustes
 
 - **Inicio:** tus estadísticas de uso (palabras, tiempo dictado, apps) y novedades.
@@ -56,9 +71,16 @@ salir; abrir la app otra vez también abre Ajustes.
   grabación y mantener graba hasta soltar (push-to-talk). También hay atajos para
   cancelar y cambiar de modo.
 - **Sonido:** sonidos de inicio y fin con volumen ajustable.
-- **Modelos:** elige modelo y gestiona tu API key.
-- **Historial:** tus transcripciones con búsqueda. Se guardan solo en tu equipo y
-  puedes desactivarlo o borrarlo.
+- **Modelos:** elige modelo y gestiona tu API key. En Windows/Linux con una GPU
+  NVIDIA, **Procesador** permite ejecutar los modelos locales en la GPU (CUDA):
+  al elegir 'GPU' se descargan una vez las bibliotecas de NVIDIA (~1,5 GB). En
+  'Auto' se usa la GPU si esas bibliotecas ya están instaladas y si no, la CPU.
+  Si la GPU falla, la app vuelve sola a la CPU y te avisa.
+- **Reuniones:** iniciar/detener el modo reunión, ver la transcripción en vivo,
+  copiarla o exportarla a `.md`.
+- **Historial:** tus transcripciones con búsqueda (las reuniones aparecen
+  marcadas y se pueden exportar). Se guardan solo en tu equipo y puedes
+  desactivarlo o borrarlo.
 
 ## macOS (compilando desde el código)
 
@@ -102,12 +124,17 @@ Resumen para quien vaya a poner su API key (detalle técnico en
 - **Lo que dictas se queda en tu equipo.** El historial (texto, duración y la app
   donde dictaste) se guarda en un archivo local; puedes desactivarlo o borrarlo
   en Ajustes › Historial.
+- **El audio del sistema y el modo reunión** solo se capturan mientras grabas
+  (dictado o reunión iniciada por ti). Las reuniones exportadas se guardan en
+  `Documentos/WhisperAround`; nada se sube salvo el audio a OpenAI si usas un
+  modelo de la nube.
 - **Los atajos de una sola tecla o de ratón** usan un hook de teclado de Windows
   que solo se activa si configuras uno de esos atajos. Solo reacciona a Ctrl,
   Alt, Shift y Win; no guarda ni envía ninguna tecla.
 - **Sin telemetría, sin analíticas, sin servidores propios.** Las únicas
   conexiones son: OpenAI (si usas un modelo de la nube), PyPI y Hugging Face (la
-  primera vez que usas un modelo local) y GitHub (para buscar actualizaciones).
+  primera vez que usas un modelo local, o al activar la GPU) y GitHub (para
+  buscar actualizaciones).
 - **Los instaladores se compilan en GitHub Actions** a partir de este código,
   con una atestación de procedencia que puedes verificar.
 - Consejo: crea una API key solo para WhisperAround y ponle un límite de gasto en
@@ -272,6 +299,15 @@ evitar el toolchain cruzado bajo WSL2.
   build nativo de Windows.
 
 ### Limitaciones conocidas / TODO
+
+- **GPU NVIDIA:** usa float16, que necesita una GPU con compute capability 7.0+
+  (serie RTX 20 o posterior); en GPUs más antiguas falla y se vuelve a la CPU.
+  La detección se hace con `nvidia-smi` al abrir la app.
+- **Audio del sistema:** solo Windows (WASAPI loopback del dispositivo de salida
+  predeterminado). En macOS y Linux no se ofrece.
+- **Modo reunión:** sin auriculares, el micrófono también capta los altavoces, así
+  que parte de lo que dicen 'Otros' puede aparecer también como 'Yo'. Los tramos se
+  cortan en pausas, pero una frase larga puede quedar partida entre dos tramos.
 
 - **Atajo global no siempre activo:** por ahora el atajo (`Ctrl+Shift+X`) parece
   funcionar de forma fiable solo cuando la app está abierta/enfocada; falta que

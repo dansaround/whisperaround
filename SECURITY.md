@@ -28,6 +28,7 @@ las conexiones que hace:
 | --- | --- | --- |
 | `api.openai.com` | Al transcribir con un modelo de OpenAI | El audio grabado (WAV), tu API key y, si los configuras, el idioma y tu vocabulario |
 | `pypi.org` | La primera vez que usas un modelo local | Descarga del paquete `faster-whisper` en un entorno privado de la app |
+| `pypi.org` | Al elegir 'GPU' en Modelos › Procesador | Descarga de `nvidia-cublas-cu12` y `nvidia-cudnn-cu12` (bibliotecas CUDA de NVIDIA) en el mismo entorno privado |
 | `huggingface.co` | La primera vez que usas cada modelo local (o al descargar uno desde Modelos, en Mac) | Descarga del modelo, fijada a una revisión concreta |
 | `github.com` | Al abrir la app | Consulta si hay versión nueva (`latest.json`); no envía datos tuyos |
 
@@ -40,7 +41,14 @@ conectarse a ningún sitio externo, solo hablar con el proceso Rust de la app.
 ## Permisos que usa y por qué
 
 - **Micrófono:** grabar mientras dictas (solo entre pulsar y volver a pulsar el
-  atajo).
+  atajo) o mientras grabas una reunión.
+- **Audio del sistema (Windows):** si eliges 'Audio del sistema' o 'Micrófono +
+  audio del sistema', la app abre una captura *loopback* (WASAPI) de la salida de
+  audio predeterminada, solo mientras graba. No cambia ni silencia nada.
+  Código: [`src-tauri/src/recorder.rs`](src-tauri/src/recorder.rs).
+- **Modo reunión:** solo empieza cuando tú lo inicias (Ajustes, bandeja o
+  atajo) y la píldora lo indica mientras dura. La primera vez pide confirmar un
+  aviso de consentimiento. Código: [`src-tauri/src/meeting.rs`](src-tauri/src/meeting.rs).
 - **Portapapeles + simular `Ctrl+V`:** pegar el texto transcrito donde está el
   cursor (se puede desactivar en Ajustes).
 - **Atajo global de teclado:** empezar/terminar el dictado desde cualquier app.
@@ -65,6 +73,9 @@ conectarse a ningún sitio externo, solo hablar con el proceso Rust de la app.
   de hasta 1000 transcripciones, su duración, modelo, modo y la app donde
   dictaste, más estadísticas totales. Está activado por defecto; se desactiva o
   se borra en Ajustes › Historial. Nunca sale de tu equipo.
+- **Reuniones:** la transcripción de cada reunión va al mismo historial (si está
+  activado). Al exportarla se escribe un `.md` en `Documentos/WhisperAround`.
+  El audio de las reuniones no se guarda: cada tramo se borra tras transcribirlo.
 
 ## Verificar que un instalador viene de este código
 
