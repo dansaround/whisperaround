@@ -331,6 +331,17 @@ const dict: Dict = {
       local: "ローカル",
       localSub: "このコンピュータ上 · プライベート、オフライン",
     },
+    device: {
+      title: "プロセッサ",
+      sub: "ローカルモデルが実行される場所",
+      auto: "自動",
+      autoSub: "ライブラリがインストールされている場合はGPUを使用し、それ以外はCPUを使用します",
+      cpu: "CPU",
+      cuda: "GPU（NVIDIA CUDA）",
+      noGpu: "NVIDIA GPUが検出されませんでした",
+      download: "GPUを選択するとNVIDIA CUDAライブラリ（~1.5 GB）が1回ダウンロードされます",
+      ready: "CUDAライブラリがインストール済み",
+    },
     python: {
       checking: "Pythonを確認中…",
       notFound: "Python 3が見つかりません",

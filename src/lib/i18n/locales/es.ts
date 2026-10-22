@@ -331,6 +331,17 @@ const dict: Dict = {
       local: "Local",
       localSub: "En tu equipo · privado, sin conexión",
     },
+    device: {
+      title: "Procesador",
+      sub: "Dónde se ejecutan los modelos locales",
+      auto: "Automático",
+      autoSub: "Usa la GPU si sus bibliotecas están instaladas; si no, la CPU",
+      cpu: "CPU",
+      cuda: "GPU (NVIDIA CUDA)",
+      noGpu: "No se detectó GPU NVIDIA",
+      download: "Elegir GPU descarga las bibliotecas NVIDIA CUDA (~1,5 GB) una sola vez",
+      ready: "Bibliotecas CUDA instaladas",
+    },
     python: {
       checking: "Comprobando Python…",
       notFound: "No se encontró Python 3",

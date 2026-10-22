@@ -45,6 +45,7 @@
   "error.local.writeScript": "无法写入 faster-whisper 脚本：{error}",
   "error.local.start": "无法启动 faster-whisper：{error}",
   "error.local.noPipe": "无法连接到 faster-whisper 进程",
+  "notice.cudaFallback": "GPU（CUDA）失败，改用 CPU：{error}",
 
   "error.python.missing": "本地模型需要 Python 3。{hint}（{error}）",
   "error.python.hintMac": "请从 python.org 或使用 `brew install python` 安装（菜单栏 › 欢迎…）。",

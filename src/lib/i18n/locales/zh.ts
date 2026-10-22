@@ -329,6 +329,17 @@ const dict: Dict = {
       local: "本地",
       localSub: "在你的电脑上 · 私密、离线",
     },
+    device: {
+      title: "处理器",
+      sub: "本地模型运行的位置",
+      auto: "自动",
+      autoSub: "在安装了驱动库时使用 GPU，否则使用 CPU",
+      cpu: "CPU",
+      cuda: "GPU（NVIDIA CUDA）",
+      noGpu: "未检测到 NVIDIA GPU",
+      download: "选择 GPU 会下载 NVIDIA CUDA 库（~1.5 GB），仅需一次",
+      ready: "CUDA 库已安装",
+    },
     python: {
       checking: "正在检查 Python…",
       notFound: "未找到 Python 3",

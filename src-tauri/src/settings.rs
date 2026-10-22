@@ -97,6 +97,9 @@ pub struct Settings {
     /// Interface language (see `i18n::LANGUAGES`).
     #[serde(default = "default_ui_language")]
     pub ui_language: String,
+    /// Where local faster-whisper models run: `auto` | `cpu` | `cuda`.
+    #[serde(default = "default_local_device")]
+    pub local_device: String,
 }
 
 fn default_model() -> String {
@@ -138,6 +141,9 @@ fn default_start_sound() -> String {
 fn default_ui_language() -> String {
     "en".into()
 }
+fn default_local_device() -> String {
+    "auto".into()
+}
 fn default_mode_icon() -> String {
     "sparkle".into()
 }
@@ -178,6 +184,7 @@ pub struct SettingsView {
     pub input_device: String,
     pub save_history: bool,
     pub ui_language: String,
+    pub local_device: String,
 }
 
 /// Partial update from the frontend: every field is optional so the settings
@@ -207,6 +214,7 @@ pub struct SettingsPatch {
     pub input_device: Option<String>,
     pub save_history: Option<bool>,
     pub ui_language: Option<String>,
+    pub local_device: Option<String>,
 }
 
 fn one_of(value: String, allowed: &[&str], field: &str) -> Result<String, String> {
@@ -372,6 +380,9 @@ impl Settings {
         if let Some(v) = patch.ui_language {
             self.ui_language = one_of(v, crate::i18n::LANGUAGES, "uiLanguage")?;
         }
+        if let Some(v) = patch.local_device {
+            self.local_device = one_of(v, &["auto", "cpu", "cuda"], "localDevice")?;
+        }
         self.normalize();
         self.model = self.effective_model().to_string();
         Ok(())
@@ -412,6 +423,7 @@ impl Settings {
             input_device: self.input_device.clone(),
             save_history: self.save_history,
             ui_language: self.ui_language.clone(),
+            local_device: self.local_device.clone(),
         }
     }
 }
@@ -549,8 +561,22 @@ mod tests {
         assert_eq!(s.cancel_shortcut, "Escape");
         assert_eq!(s.start_sound, "orus");
         assert_eq!(s.ui_language, "en");
+        assert_eq!(s.local_device, "auto");
         assert_eq!(s.effective_model(), "whisper-1");
         assert_eq!(s.active_mode, "default");
+    }
+
+    #[test]
+    fn local_device_accepts_known_values_only() {
+        let mut s = Settings::default();
+        let patch = |v: &str| SettingsPatch {
+            local_device: Some(v.into()),
+            ..Default::default()
+        };
+        s.apply_patch(patch("cuda")).unwrap();
+        assert_eq!(s.local_device, "cuda");
+        assert!(s.apply_patch(patch("tpu")).is_err());
+        assert_eq!(s.local_device, "cuda");
     }
 
     #[test]

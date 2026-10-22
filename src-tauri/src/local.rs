@@ -1,21 +1,24 @@
-//! Local transcription with faster-whisper (CTranslate2, CPU int8).
+//! Local transcription with faster-whisper (CTranslate2, CPU int8 or NVIDIA
+//! CUDA float16).
 //!
 //! faster-whisper is a Python library, so the app keeps a private virtualenv in
 //! its local data dir and runs a long-lived worker (`resources/fw_server.py`)
 //! that holds the loaded models in memory. The venv is created and the package
 //! installed on first use; models come from the shared Hugging Face cache.
 //! Downloaded MLX models (`crate::downloads`) run through the same worker with
-//! mlx-whisper, on the Apple Silicon GPU.
+//! mlx-whisper, on the Apple Silicon GPU. The CUDA libraries are pip packages
+//! added to the same venv on demand; any GPU failure falls back to the CPU.
 
 use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
-use std::sync::Mutex;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Mutex, OnceLock};
 
 use anyhow::{anyhow, Result};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::json;
-use tauri::{AppHandle, Manager};
+use tauri::{AppHandle, Emitter, Manager};
 
 use crate::i18n::{t, tf};
 
@@ -30,6 +33,9 @@ static WORKER: Mutex<Option<Worker>> = Mutex::new(None);
 /// Held while pip changes the venv (worker start-up and model downloads).
 static INSTALL: Mutex<()> = Mutex::new(());
 
+/// Set when CUDA failed this session: later requests go straight to the CPU.
+static CUDA_FAILED: AtomicBool = AtomicBool::new(false);
+
 struct Worker {
     child: Child,
     stdin: ChildStdin,
@@ -43,6 +49,18 @@ struct Reply {
     text: String,
     #[serde(default)]
     error: String,
+}
+
+/// NVIDIA GPU state for the Models page.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GpuInfo {
+    /// Whether CUDA can be offered at all (never on macOS).
+    pub supported: bool,
+    /// First NVIDIA GPU reported by `nvidia-smi`.
+    pub name: Option<String>,
+    /// The CUDA libraries are already installed in the venv.
+    pub cuda_ready: bool,
 }
 
 impl Drop for Worker {
@@ -61,6 +79,60 @@ pub fn needs_setup(app: &AppHandle) -> bool {
     venv_dir(app).map(|d| !d.join(".ready").exists()).unwrap_or(true)
 }
 
+/// Whether the CUDA libraries still have to be downloaded for the device the
+/// settings resolve to (the user picked the GPU explicitly).
+pub fn needs_cuda_setup(app: &AppHandle) -> bool {
+    resolve_device(app) == "cuda" && !cuda_ready(app)
+}
+
+/// Forget a CUDA failure so the GPU is tried again (the setting changed).
+pub fn reset_cuda_failure() {
+    CUDA_FAILED.store(false, Ordering::Relaxed);
+}
+
+/// NVIDIA GPU and CUDA-library state, for the settings UI (blocking).
+pub fn gpu_info(app: &AppHandle) -> GpuInfo {
+    if cfg!(target_os = "macos") {
+        return GpuInfo { supported: false, name: None, cuda_ready: false };
+    }
+    GpuInfo { supported: true, name: nvidia_gpu().map(str::to_string), cuda_ready: cuda_ready(app) }
+}
+
+/// Name of the first NVIDIA GPU, asked to `nvidia-smi` once per session.
+fn nvidia_gpu() -> Option<&'static str> {
+    static GPU: OnceLock<Option<String>> = OnceLock::new();
+    GPU.get_or_init(|| {
+        let out = command(Path::new("nvidia-smi"))
+            .args(["--query-gpu=name", "--format=csv,noheader"])
+            .stdin(Stdio::null())
+            .output()
+            .ok()?;
+        let text = String::from_utf8_lossy(&out.stdout);
+        let name = text.lines().next()?.trim();
+        (out.status.success() && !name.is_empty()).then(|| name.to_string())
+    })
+    .as_deref()
+}
+
+fn cuda_ready(app: &AppHandle) -> bool {
+    venv_dir(app).map(|d| d.join(".ready-cuda").exists()).unwrap_or(false)
+}
+
+/// `"cuda"` or `"cpu"`: where the next request should run. `auto` only picks
+/// the GPU when its libraries are already installed, so it never starts the
+/// big download by itself.
+fn resolve_device(app: &AppHandle) -> &'static str {
+    if cfg!(target_os = "macos") || CUDA_FAILED.load(Ordering::Relaxed) {
+        return "cpu";
+    }
+    let setting = app.state::<crate::state::AppState>().settings.lock().unwrap().local_device.clone();
+    match setting.as_str() {
+        "cuda" => "cuda",
+        "auto" if nvidia_gpu().is_some() && cuda_ready(app) => "cuda",
+        _ => "cpu",
+    }
+}
+
 /// Load a model ahead of time so the first dictation doesn't pay for it.
 /// A model still to be downloaded is skipped.
 pub fn warm(app: &AppHandle, model: &str) -> Result<()> {
@@ -69,7 +141,7 @@ pub fn warm(app: &AppHandle, model: &str) -> Result<()> {
     }
     let mut req = json!({ "cmd": "load", "model": model });
     add_engine(app, model, &mut req)?;
-    request(app, req).map(|_| ())
+    request_with_fallback(app, req).map(|_| ())
 }
 
 /// Point the worker at a downloaded MLX model's folder (`"mlx"`), making sure
@@ -107,9 +179,29 @@ pub fn transcribe(
     });
     add_engine(app, model, &mut req)?;
     std::fs::write(&path, wav).map_err(|e| anyhow!(tf("error.local.writeAudio", &[("error", &e)])))?;
-    let result = request(app, req);
+    let result = request_with_fallback(app, req);
     let _ = std::fs::remove_file(&path);
     result
+}
+
+/// Run `req` on the resolved device. If the GPU fails (libraries missing, no
+/// usable driver, worker crash...) retry once on the CPU, stay there for the
+/// rest of the session and tell the user.
+fn request_with_fallback(app: &AppHandle, req: serde_json::Value) -> Result<String> {
+    if resolve_device(app) == "cuda" {
+        let mut gpu = req.clone();
+        gpu["device"] = json!("cuda");
+        match ensure_cuda(app).and_then(|()| request(app, gpu)) {
+            Ok(text) => return Ok(text),
+            Err(e) => {
+                CUDA_FAILED.store(true, Ordering::Relaxed);
+                let _ = app.emit("notice", tf("notice.cudaFallback", &[("error", &e)]));
+            }
+        }
+    }
+    let mut cpu = req;
+    cpu["device"] = json!("cpu");
+    request(app, cpu)
 }
 
 /// Send one request to the worker, (re)starting it if needed.
@@ -147,7 +239,10 @@ fn spawn_worker(app: &AppHandle) -> Result<Worker> {
     std::fs::write(&script, SERVER_SRC)
         .map_err(|e| anyhow!(tf("error.local.writeScript", &[("error", &e)])))?;
 
-    let mut child = command(&python)
+    let mut cmd = command(&python);
+    #[cfg(target_os = "linux")]
+    set_library_path(&mut cmd, &venv_dir(app)?);
+    let mut child = cmd
         .arg("-u")
         .arg(&script)
         .stdin(Stdio::piped())
@@ -158,6 +253,24 @@ fn spawn_worker(app: &AppHandle) -> Result<Worker> {
     let stdin = child.stdin.take().ok_or_else(|| anyhow!(t("error.local.noPipe")))?;
     let stdout = BufReader::new(child.stdout.take().ok_or_else(|| anyhow!(t("error.local.noPipe")))?);
     Ok(Worker { child, stdin, stdout })
+}
+
+/// Let the dynamic loader find the pip-installed NVIDIA libraries. It reads
+/// `LD_LIBRARY_PATH` at process start, so the worker can't set it itself.
+#[cfg(target_os = "linux")]
+fn set_library_path(cmd: &mut Command, venv: &Path) {
+    let mut dirs = Vec::new();
+    let pythons = std::fs::read_dir(venv.join("lib")).into_iter().flatten().flatten();
+    for python in pythons {
+        let nvidia = python.path().join("site-packages").join("nvidia");
+        for pkg in std::fs::read_dir(nvidia).into_iter().flatten().flatten() {
+            dirs.push(pkg.path().join("lib"));
+        }
+    }
+    dirs.extend(std::env::var_os("LD_LIBRARY_PATH").iter().flat_map(std::env::split_paths));
+    if let Ok(joined) = std::env::join_paths(dirs) {
+        cmd.env("LD_LIBRARY_PATH", joined);
+    }
 }
 
 fn venv_dir(app: &AppHandle) -> Result<PathBuf> {
@@ -232,6 +345,35 @@ pub fn ensure_mlx(app: &AppHandle) -> Result<()> {
     )?;
     std::fs::write(&ready, "")?;
     Ok(())
+}
+
+/// Add the NVIDIA CUDA libraries (cuBLAS and cuDNN 9, which CTranslate2 4.x
+/// expects) to the venv for running models on the GPU. A running worker is
+/// dropped afterwards so the next one starts with the library paths set.
+pub fn ensure_cuda(app: &AppHandle) -> Result<()> {
+    if install_cuda(app)? {
+        // Not under INSTALL: `request` takes WORKER first, then INSTALL.
+        *WORKER.lock().unwrap() = None;
+    }
+    Ok(())
+}
+
+/// Returns whether something was installed.
+fn install_cuda(app: &AppHandle) -> Result<bool> {
+    let _install = INSTALL.lock().unwrap();
+    let ready = venv_dir(app)?.join(".ready-cuda");
+    if ready.exists() {
+        return Ok(false);
+    }
+    let python = venv_with_faster_whisper(app)?;
+    run(
+        command(&python)
+            .args(["-m", "pip", "install", "--disable-pip-version-check"])
+            .args(["nvidia-cublas-cu12", "nvidia-cudnn-cu12>=9,<10"]),
+        "pip install nvidia-cublas-cu12 nvidia-cudnn-cu12",
+    )?;
+    std::fs::write(&ready, "")?;
+    Ok(true)
 }
 
 /// Translation key for where to get Python.

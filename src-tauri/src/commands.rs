@@ -66,7 +66,10 @@ pub fn update_settings(
         crate::refresh_tray(&app);
         window::localize_titles(&app);
     }
-    if old.effective_model() != snapshot.effective_model() {
+    if old.local_device != snapshot.local_device {
+        local::reset_cuda_failure();
+    }
+    if old.effective_model() != snapshot.effective_model() || old.local_device != snapshot.local_device {
         warm_local_model(&app, snapshot.effective_model());
     }
     apply_appearance(&app, &old, &snapshot);
@@ -211,15 +214,15 @@ pub fn clear_history(app: AppHandle) -> Result<(), String> {
 }
 
 /// If `model` is a local faster-whisper model, prepare it in the background.
-/// The first-time venv install is surfaced as `Processing` so the pill shows
-/// it is busy; a plain model load stays silent.
+/// The first-time venv or CUDA libraries install is surfaced as `Processing`
+/// so the pill shows it is busy; a plain model load stays silent.
 pub fn warm_local_model(app: &AppHandle, model: &str) {
     let Some(name) = local::model_name(model) else {
         return;
     };
     let (app, name) = (app.clone(), name.to_string());
     tauri::async_runtime::spawn_blocking(move || {
-        let installing = local::needs_setup(&app);
+        let installing = local::needs_setup(&app) || local::needs_cuda_setup(&app);
         if installing {
             set_status(&app, AppStatus::Processing, None);
         }
@@ -281,6 +284,15 @@ pub async fn check_python() -> Option<String> {
         .await
         .ok()
         .flatten()
+}
+
+/// NVIDIA GPU and CUDA-library state for the Models page. Runs off the main
+/// thread since it spawns `nvidia-smi`.
+#[tauri::command]
+pub async fn gpu_info(app: AppHandle) -> local::GpuInfo {
+    tauri::async_runtime::spawn_blocking(move || local::gpu_info(&app))
+        .await
+        .unwrap_or(local::GpuInfo { supported: false, name: None, cuda_ready: false })
 }
 
 /// Microsoft Store page for Python 3.12 (well covered by faster-whisper wheels).

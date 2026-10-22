@@ -9,6 +9,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { getVersion } from "@tauri-apps/api/app";
 import type {
   AppStatus,
+  GpuInfo,
   History,
   HistoryEntry,
   InputDevice,
@@ -82,6 +83,7 @@ let previewSettings: SettingsView = {
   inputDevice: "",
   saveHistory: true,
   uiLanguage: new URLSearchParams(location.search).get("lang") ?? "en",
+  localDevice: "auto",
 };
 
 function previewHistory(): History {
@@ -219,6 +221,12 @@ export function onSettingsChanged(handler: (v: SettingsView) => void): Promise<U
 export function onModeChanged(handler: (name: string) => void): Promise<UnlistenFn> {
   if (!IN_TAURI) return Promise.resolve(() => {});
   return listen<string>("mode-changed", (event) => handler(event.payload));
+}
+
+/** A message from the backend worth showing briefly (e.g. the GPU fell back to the CPU). */
+export function onNotice(handler: (text: string) => void): Promise<UnlistenFn> {
+  if (!IN_TAURI) return Promise.resolve(() => {});
+  return listen<string>("notice", (event) => handler(event.payload));
 }
 
 /** Update only the active mode's transcription model (pill model dropdown). */
@@ -374,6 +382,12 @@ export function onModelDownload(handler: (p: ModelDownload) => void): Promise<Un
 export function checkPython(): Promise<string | null> {
   if (!IN_TAURI) return Promise.resolve(null);
   return invoke<string | null>("check_python");
+}
+
+/** NVIDIA GPU detected for local models, and whether its CUDA libraries are installed. */
+export function gpuInfo(): Promise<GpuInfo> {
+  if (!IN_TAURI) return Promise.resolve({ supported: !IS_MAC, name: IS_MAC ? null : "NVIDIA GeForce RTX 4070", cudaReady: false });
+  return invoke<GpuInfo>("gpu_info");
 }
 
 /** Open the Python install page (Microsoft Store on Windows, python.org elsewhere). */

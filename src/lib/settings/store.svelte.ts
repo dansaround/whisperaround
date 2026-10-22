@@ -11,6 +11,7 @@ import {
   listInputDevices,
   loadSettings,
   onHistory,
+  onNotice,
   onSettingsChanged,
   updateSettings,
 } from "../ipc";
@@ -52,6 +53,7 @@ class SettingsStore {
       .catch((e) => console.error("checkUpdate failed", e));
     onSettingsChanged((v) => this.setView(v));
     onHistory(() => this.refreshHistory());
+    onNotice((text) => this.notify(text, "error"));
     local.init();
   }
 

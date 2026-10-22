@@ -330,6 +330,17 @@ const dict: Dict = {
       local: "로컬",
       localSub: "이 컴퓨터에서 실행 · 비공개, 오프라인",
     },
+    device: {
+      title: "프로세서",
+      sub: "로컬 모델이 실행되는 위치",
+      auto: "자동",
+      autoSub: "라이브러리가 설치되어 있으면 GPU를, 아니면 CPU를 사용합니다",
+      cpu: "CPU",
+      cuda: "GPU (NVIDIA CUDA)",
+      noGpu: "NVIDIA GPU를 찾을 수 없음",
+      download: "GPU를 선택하면 NVIDIA CUDA 라이브러리(~1.5 GB)를 한 번 다운로드합니다",
+      ready: "CUDA 라이브러리 설치됨",
+    },
     python: {
       checking: "Python 확인 중…",
       notFound: "Python 3을 찾을 수 없음",

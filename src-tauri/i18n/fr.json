@@ -45,6 +45,7 @@
   "error.local.writeScript": "Impossible d’écrire le script faster-whisper : {error}",
   "error.local.start": "Impossible de démarrer faster-whisper : {error}",
   "error.local.noPipe": "Impossible de se connecter au processus faster-whisper",
+  "notice.cudaFallback": "GPU (CUDA) a échoué, utilisation du CPU à la place : {error}",
 
   "error.python.missing": "Les modèles locaux nécessitent Python 3. {hint} ({error})",
   "error.python.hintMac": "Installez-le depuis python.org ou avec `brew install python` (barre des menus › Bienvenue…).",

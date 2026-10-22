@@ -22,6 +22,19 @@ export type SoundName = "start" | "stop" | "error";
 /** Start cue played when the pill starts listening. */
 export type StartSound = "orus" | "loto" | "okaso";
 
+/** Where local faster-whisper models run. */
+export type LocalDevice = "auto" | "cpu" | "cuda";
+
+/** NVIDIA GPU state (`gpu_info` command). */
+export interface GpuInfo {
+  /** False where CUDA is never offered (macOS). */
+  supported: boolean;
+  /** First NVIDIA GPU found, or null. */
+  name: string | null;
+  /** The CUDA libraries are already installed. */
+  cudaReady: boolean;
+}
+
 /** A transcription preset. */
 export interface Mode {
   id: string;
@@ -66,6 +79,7 @@ export interface SettingsView {
   saveHistory: boolean;
   /** Interface language (see `Locale` in `i18n/index.svelte.ts`). */
   uiLanguage: string;
+  localDevice: LocalDevice;
 }
 
 /** Partial update; `openaiApiKey` blank = keep the stored key. */

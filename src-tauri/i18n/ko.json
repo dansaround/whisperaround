@@ -45,6 +45,7 @@
   "error.local.writeScript": "faster-whisper 스크립트를 쓸 수 없습니다: {error}",
   "error.local.start": "faster-whisper를 시작할 수 없습니다: {error}",
   "error.local.noPipe": "faster-whisper 프로세스에 연결할 수 없습니다",
+  "notice.cudaFallback": "GPU(CUDA) 실패, 대신 CPU를 사용합니다: {error}",
 
   "error.python.missing": "로컬 모델을 사용하려면 Python 3이 필요합니다. {hint} ({error})",
   "error.python.hintMac": "python.org에서 또는 `brew install python`으로 설치하세요(메뉴 막대 › 시작하기…).",

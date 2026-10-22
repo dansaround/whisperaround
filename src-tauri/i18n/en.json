@@ -45,6 +45,7 @@
   "error.local.writeScript": "Couldn't write the faster-whisper script: {error}",
   "error.local.start": "Couldn't start faster-whisper: {error}",
   "error.local.noPipe": "Couldn't connect to the faster-whisper process",
+  "notice.cudaFallback": "GPU (CUDA) failed, using the CPU instead: {error}",
 
   "error.python.missing": "Local models need Python 3. {hint} ({error})",
   "error.python.hintMac": "Install it from python.org or with `brew install python` (tray › Welcome…).",

@@ -157,6 +157,7 @@ pub fn run() {
             commands::fit_window,
             commands::open_settings,
             commands::check_python,
+            commands::gpu_info,
             commands::open_python_install,
             commands::check_permissions,
             commands::window_material,

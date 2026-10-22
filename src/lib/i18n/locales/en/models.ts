@@ -20,6 +20,17 @@ export default {
     local: "Local",
     localSub: "On your computer · private, offline",
   },
+  device: {
+    title: "Processor",
+    sub: "Where local models run",
+    auto: "Auto",
+    autoSub: "Uses the GPU when its libraries are installed, otherwise the CPU",
+    cpu: "CPU",
+    cuda: "GPU (NVIDIA CUDA)",
+    noGpu: "No NVIDIA GPU detected",
+    download: "Choosing GPU downloads the NVIDIA CUDA libraries (~1.5 GB) once",
+    ready: "CUDA libraries installed",
+  },
   python: {
     checking: "Checking Python…",
     notFound: "Python 3 not found",

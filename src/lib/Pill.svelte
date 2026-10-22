@@ -10,6 +10,7 @@
     loadSettings,
     onSettingsChanged,
     onModeChanged,
+    onNotice,
     onRevealPill,
     setModel,
     fitWindow,
@@ -44,11 +45,14 @@
   let menuOpen = $state(false);
   /** Mode name flashed after the "Change mode" shortcut. */
   let modeToast = $state<string | null>(null);
+  /** Backend notice (e.g. GPU fallback) flashed in the same toast. */
+  let noticeToast = $state<string | null>(null);
   /** Tray "show pill" while auto-hidden: stay visible for a moment. */
   let revealed = $state(false);
   /** A fresh error stays visible for a while even with "always show" off. */
   let errorFresh = $state(false);
   let toastTimer: ReturnType<typeof setTimeout> | undefined;
+  let noticeTimer: ReturnType<typeof setTimeout> | undefined;
   let revealTimer: ReturnType<typeof setTimeout> | undefined;
   let errorTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -153,7 +157,7 @@
   const autoPanel = $derived(pillStyle === "classic" && busy);
   /** Auto-hidden: "always show" off and nothing worth showing. */
   const hidden = $derived(
-    !alwaysShow && !busy && !expanded && !menuOpen && !revealed && !modeToast && !(status === "error" && errorFresh),
+    !alwaysShow && !busy && !expanded && !menuOpen && !revealed && !modeToast && !noticeToast && !(status === "error" && errorFresh),
   );
 
   // Hidden pill: let clicks fall through to whatever is underneath.
@@ -191,7 +195,7 @@
   const target = $derived.by<Size>(() => {
     if (expanded || autoPanel) return { w: PANEL.w, h: menuOpen ? PANEL.h + 8 + MENU_H + 16 : PANEL.h };
     const tipH = POP_OFFSET + 44;
-    if (modeToast) return { w: COMPACT_W, h: tipH };
+    if (modeToast || noticeToast) return { w: COMPACT_W, h: tipH };
     if (hidden) return IDLE;
     if (busy) return { w: COMPACT_W, h: tooltipBtn === "cancel" ? tipH : COMPACT_H };
     if (menuOpen) return { w: COMPACT_W, h: POP_OFFSET + MENU_H + 16 };
@@ -245,6 +249,11 @@
       clearTimeout(toastTimer);
       toastTimer = setTimeout(() => (modeToast = null), 1600);
     });
+    const unlistenNotice = onNotice((text) => {
+      noticeToast = text;
+      clearTimeout(noticeTimer);
+      noticeTimer = setTimeout(() => (noticeToast = null), 4000);
+    });
     const unlistenReveal = onRevealPill(() => {
       revealed = true;
       clearTimeout(revealTimer);
@@ -288,6 +297,7 @@
       unlistenLevel.then((fn) => fn());
       unlistenSettings.then((fn) => fn());
       unlistenMode.then((fn) => fn());
+      unlistenNotice.then((fn) => fn());
       unlistenReveal.then((fn) => fn());
       clearTimeout(toastTimer);
       clearTimeout(revealTimer);
@@ -605,7 +615,12 @@
     </div>
   </div>
 
-  {#if modeToast && !expanded && !autoPanel}
+  {#if noticeToast && !expanded && !autoPanel}
+    <div class="tooltip mode-toast notice-toast" transition:pop={{ duration: 220 }}>
+      <span class="mode-dot warn" aria-hidden="true"></span>
+      <span class="tt-text">{noticeToast}</span>
+    </div>
+  {:else if modeToast && !expanded && !autoPanel}
     <div class="tooltip mode-toast" transition:pop={{ duration: 220 }}>
       <span class="mode-dot" aria-hidden="true"></span>
       <span class="tt-text">{modeToast}</span>
@@ -843,6 +858,15 @@
     border-radius: 50%;
     background: #7ee36b;
     box-shadow: 0 0 8px rgba(126, 227, 107, 0.8);
+  }
+  .mode-dot.warn {
+    background: #f59e0b;
+    box-shadow: 0 0 8px rgba(245, 158, 11, 0.8);
+  }
+  .notice-toast {
+    max-width: 280px;
+    white-space: normal;
+    border-radius: 12px;
   }
   .tt-text {
     font-weight: 500;

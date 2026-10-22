@@ -5,7 +5,9 @@
   import { store } from "../store.svelte";
   import { MODELS, modelDescription, type ModelOption } from "../../models";
   import { local, formatBytes } from "../../localModels.svelte";
-  import { cancelModelDownload, checkPython, downloadModel, openPythonInstall, setModel, IS_WINDOWS, DOWNLOAD_CANCELLED } from "../../ipc";
+  import Select from "../ui/Select.svelte";
+  import { cancelModelDownload, checkPython, downloadModel, gpuInfo, openPythonInstall, setModel, IS_MAC, IS_WINDOWS, DOWNLOAD_CANCELLED } from "../../ipc";
+  import type { GpuInfo, LocalDevice } from "../../types";
   import { t, type Key } from "../../i18n/index.svelte";
 
   const v = $derived(store.view!);
@@ -15,7 +17,19 @@
   /** undefined = checking, null = missing. */
   let python = $state<string | null | undefined>(undefined);
 
+  let gpu = $state<GpuInfo | null>(null);
+  // The GPU option is omitted (Select has no disabled items) unless a GPU exists or is already chosen.
+  const deviceOptions = $derived([
+    { value: "auto" as LocalDevice, label: t("models.device.auto") },
+    { value: "cpu" as LocalDevice, label: t("models.device.cpu") },
+    ...(gpu?.name || v.localDevice === "cuda" ? [{ value: "cuda" as LocalDevice, label: t("models.device.cuda") }] : []),
+  ]);
+  const deviceNote = $derived(
+    !gpu ? "" : !gpu.name ? t("models.device.noGpu") : v.localDevice === "auto" ? t("models.device.autoSub") : !gpu.cudaReady ? t("models.device.download") : t("models.device.ready"),
+  );
+
   onMount(() => {
+    if (!IS_MAC) gpuInfo().then((g) => (gpu = g)).catch(() => {});
     checkPython()
       .then((p) => (python = p))
       .catch(() => (python = null));
@@ -104,6 +118,22 @@
           {/if}
         {/if}
       </div>
+      {#if g.local && !IS_MAC}
+        <div class="card">
+          <div class="row tall">
+            <div class="row-text">
+              <strong class="help">
+                {t("models.device.title")}
+                {#if gpu?.name}<span class="badge green">{gpu.name}</span>{/if}
+              </strong>
+              <small>{t("models.device.sub")}{deviceNote ? ` · ${deviceNote}` : ""}</small>
+            </div>
+            <div class="control">
+              <Select value={v.localDevice} options={deviceOptions} align="right" onchange={(localDevice) => store.patch({ localDevice })} />
+            </div>
+          </div>
+        </div>
+      {/if}
       <div class="grid">
         {#each MODELS.filter((m) => m.local === g.local && local.available(m)) as m (m.id)}
           {@const active = m.id === v.model}
