@@ -24,6 +24,9 @@ pub struct Entry {
     pub mode: String,
     /// App that had focus when the recording started (macOS).
     pub app: Option<String>,
+    /// A meeting transcript (multi-line text, never pasted).
+    #[serde(default)]
+    pub meeting: bool,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -148,6 +151,7 @@ mod tests {
             model: "whisper-1".into(),
             mode: "Default".into(),
             app: app.map(Into::into),
+            meeting: false,
         }
     }
 
@@ -161,6 +165,13 @@ mod tests {
         assert_eq!(h.stats.words, 13);
         assert_eq!(h.stats.sessions, 3);
         assert_eq!(h.stats.apps, vec!["Notes", "Mail"]);
+    }
+
+    #[test]
+    fn entries_saved_before_meetings_still_load() {
+        let old = r#"{"id":1,"ts":1,"text":"hi","words":1,"durationMs":5,"model":"m","mode":"Default","app":null}"#;
+        let e: Entry = serde_json::from_str(old).unwrap();
+        assert!(!e.meeting);
     }
 
     #[test]

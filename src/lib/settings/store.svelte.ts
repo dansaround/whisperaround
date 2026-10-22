@@ -8,9 +8,12 @@ import {
   checkPermissions,
   checkUpdate,
   getHistory,
+  getMeeting,
   listInputDevices,
   loadSettings,
   onHistory,
+  onMeeting,
+  onMeetingConsent,
   onNotice,
   onSettingsChanged,
   updateSettings,
@@ -18,9 +21,9 @@ import {
 import { local } from "../localModels.svelte";
 import { applyTheme } from "../theme";
 import { setLocale } from "../i18n/index.svelte";
-import type { History, InputDevice, Permissions, SettingsPatch, SettingsView } from "../types";
+import type { History, InputDevice, MeetingView, Permissions, SettingsPatch, SettingsView } from "../types";
 
-export type Page = "home" | "modes" | "vocabulary" | "configuration" | "sound" | "models" | "history";
+export type Page = "home" | "modes" | "vocabulary" | "configuration" | "sound" | "models" | "history" | "meetings";
 
 export interface Toast {
   id: number;
@@ -36,6 +39,10 @@ class SettingsStore {
   version = $state("");
   update = $state<string | null>(null);
   page = $state<Page>("home");
+  /** The meeting being recorded, or the last finished one. */
+  meeting = $state<MeetingView>({ active: false, finishing: false, startedTs: 0, model: "", segments: [] });
+  /** Show the recording-consent notice on the Meetings page. */
+  consentPrompt = $state(false);
   toast = $state<Toast | null>(null);
   private toastTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -54,6 +61,14 @@ class SettingsStore {
     onSettingsChanged((v) => this.setView(v));
     onHistory(() => this.refreshHistory());
     onNotice((text) => this.notify(text, "error"));
+    getMeeting()
+      .then((m) => (this.meeting = m))
+      .catch((e) => console.error("getMeeting failed", e));
+    onMeeting((m) => (this.meeting = m));
+    onMeetingConsent(() => {
+      this.page = "meetings";
+      this.consentPrompt = true;
+    });
     local.init();
   }
 

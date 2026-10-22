@@ -3,6 +3,9 @@
   "tray.show": "Mostrar cápsula",
   "tray.settings": "Ajustes…",
   "tray.welcome": "Boas-vindas…",
+  "tray.meetingStart": "Iniciar gravação de reunião",
+  "tray.meetingStop": "Parar gravação de reunião",
+  "tray.meetingTooltip": "WhisperAround — gravando uma reunião",
   "tray.quit": "Encerrar WhisperAround",
 
   "window.welcomeTitle": "Boas-vindas ao WhisperAround",
@@ -97,10 +100,17 @@
   "shortcut.name.cancel": "Cancelar gravação",
   "shortcut.name.changeMode": "Trocar modo",
   "shortcut.name.mouse": "Atalho do mouse",
+  "shortcut.name.meeting": "Gravar reunião",
   "shortcut.error.named": "{name}: {error}",
   "shortcut.error.unknownModifier": "tecla modificadora desconhecida: '{key}'",
   "shortcut.error.invalidMouseButton": "botão do mouse inválido: '{button}'",
   "shortcut.error.invalid": "atalho inválido: '{shortcut}'",
   "shortcut.error.duplicate": "“{name}” usa o mesmo atalho que “{other}”",
-  "shortcut.error.register": "Não foi possível registrar '{shortcut}': {error}"
+  "shortcut.error.register": "Não foi possível registrar '{shortcut}': {error}",
+
+  "meeting.title": "Reunião",
+  "meeting.me": "Eu",
+  "meeting.others": "Outros",
+  "meeting.error.chunk": "Não foi possível transcrever parte da reunião: {error}",
+  "meeting.error.export": "Não foi possível salvar a reunião: {error}"
 }

@@ -7,6 +7,7 @@ export default {
     configuration: "Configuration",
     sound: "Sound",
     models: "Models library",
+    meetings: "Meetings",
     history: "History",
   },
   mic: {

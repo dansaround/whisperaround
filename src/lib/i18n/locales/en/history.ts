@@ -17,6 +17,8 @@ export default {
   },
   copy: "Copy",
   delete: "Delete",
+  meeting: "Meeting",
+  exportMd: "Export .md",
   copyFailed: "Couldn't copy to the clipboard",
   empty: {
     noMatches: "No matches",

@@ -177,6 +177,7 @@ fn stop_and_transcribe(app: &AppHandle) {
                     model,
                     mode: settings.active().name.clone(),
                     app: focused_app,
+                    meeting: false,
                 };
                 history::record(&app, entry, settings.save_history);
             }

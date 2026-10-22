@@ -40,6 +40,8 @@ export default {
     pttSub: "Hold to record, release when done",
     mouse: "Mouse shortcut",
     mouseSub: "Tap to toggle, or hold and release when done",
+    meeting: "Meeting recording",
+    meetingSub: "Starts and stops a meeting transcript",
     tip: "Tip: tap a modifier alone (like Right {cmd}) to record a single-key shortcut. Press {delete} while recording to clear one.",
   },
   general: {

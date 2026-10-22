@@ -13,5 +13,6 @@ import configuration from "./configuration";
 import sound from "./sound";
 import models from "./models";
 import history from "./history";
+import meetings from "./meetings";
 
-export default { common, pill, welcome, shell, home, modes, vocabulary, configuration, sound, models, history };
+export default { common, pill, welcome, shell, home, modes, vocabulary, configuration, sound, models, history, meetings };

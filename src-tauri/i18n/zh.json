@@ -3,6 +3,9 @@
   "tray.show": "显示胶囊",
   "tray.settings": "设置…",
   "tray.welcome": "欢迎…",
+  "tray.meetingStart": "开始会议录音",
+  "tray.meetingStop": "停止会议录音",
+  "tray.meetingTooltip": "WhisperAround — 正在录制会议",
   "tray.quit": "退出 WhisperAround",
   "window.welcomeTitle": "欢迎使用 WhisperAround",
   "error.mic.open": "麦克风错误：{error}",
@@ -77,6 +80,7 @@
   "shortcut.name.cancel": "取消录音",
   "shortcut.name.changeMode": "切换模式",
   "shortcut.name.mouse": "鼠标快捷键",
+  "shortcut.name.meeting": "会议录音",
   "shortcut.error.named": "{name}：{error}",
   "shortcut.error.unknownModifier": "未知修饰键：'{key}'",
   "shortcut.error.invalidMouseButton": "无效的鼠标按钮：'{button}'",
@@ -87,5 +91,11 @@
   "error.systemAudio.open": "无法捕获系统音频：{error}",
   "error.systemAudio.noDevice": "没有可用的输出设备",
   "error.systemAudio.config": "无法读取输出设备的设置：{error}",
-  "error.systemAudio.silent": "此电脑上没有音频播放。"
+  "error.systemAudio.silent": "此电脑上没有音频播放。",
+
+  "meeting.title": "会议",
+  "meeting.me": "我",
+  "meeting.others": "其他人",
+  "meeting.error.chunk": "会议的部分内容无法转写：{error}",
+  "meeting.error.export": "无法存储会议：{error}"
 }

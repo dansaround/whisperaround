@@ -14,6 +14,7 @@ import type {
   HistoryEntry,
   InputDevice,
   LocalModel,
+  MeetingView,
   ModelDownload,
   Permissions,
   SettingsPatch,
@@ -64,6 +65,8 @@ let previewSettings: SettingsView = {
   modeShortcut: "Alt+Shift+KeyK",
   pttShortcut: "",
   mouseShortcut: "",
+  meetingShortcut: "",
+  meetingConsent: false,
   autoPaste: true,
   theme: "auto",
   pillStyle: "mini",
@@ -107,6 +110,7 @@ function previewHistory(): History {
     model: i % 2 ? "gpt-4o-transcribe" : "gpt-4o-mini-transcribe",
     mode: i % 2 ? "Message" : "Default",
     app: apps[i],
+    meeting: false,
   }));
   entries.reverse();
   return { entries, stats: { words: 102_865, audioMs: 49_400_000, sessions: 4_210, apps } };
@@ -299,6 +303,90 @@ export function onHistory(handler: () => void): Promise<UnlistenFn> {
   }
   return listen("history", () => handler());
 }
+
+// --- Meetings -----------------------------------------------------------------
+
+/** Browser preview only: a fake meeting that "transcribes" a line every few seconds. */
+let previewMeeting: MeetingView = { active: false, finishing: false, startedTs: 0, model: "", segments: [] };
+let previewMeetingTimer: ReturnType<typeof setInterval> | undefined;
+const previewMeetingListeners = new Set<(v: MeetingView) => void>();
+function setPreviewMeeting(change: Partial<MeetingView>) {
+  previewMeeting = { ...previewMeeting, ...change };
+  previewMeetingListeners.forEach((fn) => fn(structuredClone(previewMeeting)));
+}
+
+/** The current meeting (live, or the last finished one). */
+export function getMeeting(): Promise<MeetingView> {
+  if (!IN_TAURI) return Promise.resolve(structuredClone(previewMeeting));
+  return invoke<MeetingView>("meeting_state");
+}
+
+/** Start recording a meeting (asks for consent first if it was never given). */
+export function startMeeting(): Promise<void> {
+  if (!IN_TAURI) {
+    if (previewMeeting.active) return Promise.resolve();
+    if (!previewSettings.meetingConsent) {
+      previewConsentListeners.forEach((fn) => fn());
+      return Promise.resolve();
+    }
+    const startedTs = Date.now();
+    setPreviewMeeting({ active: true, finishing: false, startedTs, model: previewSettings.model, segments: [] });
+    previewMeetingTimer = setInterval(() => {
+      const startMs = Date.now() - startedTs;
+      const both = previewSettings.inputDevice.startsWith("mix:");
+      const n = previewMeeting.segments.length;
+      const segment = {
+        startMs,
+        endMs: startMs + 4_000,
+        speaker: both ? (n % 2 ? ("system" as const) : ("mic" as const)) : null,
+        text: n % 2 ? "Sounds good, let's ship it on Thursday." : "Can everyone see my screen?",
+      };
+      setPreviewMeeting({ segments: [...previewMeeting.segments, segment] });
+    }, 4_000);
+    return Promise.resolve();
+  }
+  return invoke("start_meeting");
+}
+
+/** Stop the meeting; the rest is transcribed and saved to the history. */
+export function stopMeeting(): Promise<void> {
+  if (!IN_TAURI) {
+    clearInterval(previewMeetingTimer);
+    setPreviewMeeting({ active: false, finishing: false });
+    return Promise.resolve();
+  }
+  return invoke("stop_meeting");
+}
+
+/** Save `content` as Markdown in the Documents folder and open it. Returns the path. */
+export function exportMeeting(fileName: string, content: string): Promise<string> {
+  if (!IN_TAURI) {
+    const url = URL.createObjectURL(new Blob([content], { type: "text/markdown" }));
+    Object.assign(document.createElement("a"), { href: url, download: fileName }).click();
+    URL.revokeObjectURL(url);
+    return Promise.resolve(`~/Documents/WhisperAround/${fileName}`);
+  }
+  return invoke<string>("export_meeting", { fileName, content });
+}
+
+/** The meeting changed: a segment arrived, it started, stopped or finished. */
+export function onMeeting(handler: (v: MeetingView) => void): Promise<UnlistenFn> {
+  if (!IN_TAURI) {
+    previewMeetingListeners.add(handler);
+    return Promise.resolve(() => previewMeetingListeners.delete(handler));
+  }
+  return listen<MeetingView>("meeting", (event) => handler(event.payload));
+}
+
+/** Meeting recording was requested without the user's consent: show the notice. */
+export function onMeetingConsent(handler: () => void): Promise<UnlistenFn> {
+  if (!IN_TAURI) {
+    previewConsentListeners.add(handler);
+    return Promise.resolve(() => previewConsentListeners.delete(handler));
+  }
+  return listen("meeting-consent", () => handler());
+}
+const previewConsentListeners = new Set<() => void>();
 
 // --- Downloadable local models ----------------------------------------------
 

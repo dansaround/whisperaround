@@ -56,6 +56,12 @@ pub struct Settings {
     pub ptt_shortcut: String,
     #[serde(default)]
     pub mouse_shortcut: String,
+    /// Starts and stops a meeting transcript (unbound by default).
+    #[serde(default)]
+    pub meeting_shortcut: String,
+    /// Whether the user acknowledged the recording-consent notice.
+    #[serde(default)]
+    pub meeting_consent: bool,
 
     // --- Appearance ---------------------------------------------------------
     /// `auto` | `light` | `dark`.
@@ -169,6 +175,8 @@ pub struct SettingsView {
     pub mode_shortcut: String,
     pub ptt_shortcut: String,
     pub mouse_shortcut: String,
+    pub meeting_shortcut: String,
+    pub meeting_consent: bool,
     pub auto_paste: bool,
     pub theme: String,
     pub pill_style: String,
@@ -199,6 +207,8 @@ pub struct SettingsPatch {
     pub mode_shortcut: Option<String>,
     pub ptt_shortcut: Option<String>,
     pub mouse_shortcut: Option<String>,
+    pub meeting_shortcut: Option<String>,
+    pub meeting_consent: Option<bool>,
     pub auto_paste: Option<bool>,
     pub theme: Option<String>,
     pub pill_style: Option<String>,
@@ -329,6 +339,12 @@ impl Settings {
         if let Some(v) = patch.mouse_shortcut {
             self.mouse_shortcut = v;
         }
+        if let Some(v) = patch.meeting_shortcut {
+            self.meeting_shortcut = v;
+        }
+        if let Some(v) = patch.meeting_consent {
+            self.meeting_consent = v;
+        }
         if let Some(v) = patch.auto_paste {
             self.auto_paste = v;
         }
@@ -408,6 +424,8 @@ impl Settings {
             mode_shortcut: self.mode_shortcut.clone(),
             ptt_shortcut: self.ptt_shortcut.clone(),
             mouse_shortcut: self.mouse_shortcut.clone(),
+            meeting_shortcut: self.meeting_shortcut.clone(),
+            meeting_consent: self.meeting_consent,
             auto_paste: self.auto_paste,
             theme: self.theme.clone(),
             pill_style: self.pill_style.clone(),

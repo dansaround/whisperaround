@@ -7,6 +7,7 @@ use crate::downloads;
 use crate::history;
 use crate::i18n::tf;
 use crate::local;
+use crate::meeting;
 use crate::pipeline;
 use crate::recorder;
 use crate::settings::{self, Settings, SettingsPatch, SettingsView};
@@ -78,8 +79,11 @@ pub fn update_settings(
 }
 
 fn shortcuts_differ(a: &Settings, b: &Settings) -> bool {
-    (&a.shortcut, &a.cancel_shortcut, &a.mode_shortcut, &a.ptt_shortcut, &a.mouse_shortcut)
-        != (&b.shortcut, &b.cancel_shortcut, &b.mode_shortcut, &b.ptt_shortcut, &b.mouse_shortcut)
+    let keys = |s: &Settings| {
+        [&s.shortcut, &s.cancel_shortcut, &s.mode_shortcut, &s.ptt_shortcut, &s.mouse_shortcut, &s.meeting_shortcut]
+            .map(String::clone)
+    };
+    keys(a) != keys(b)
 }
 
 /// Push appearance changes to the windows: native theme (title bars, and the
@@ -437,6 +441,31 @@ pub fn show_settings_window(app: &AppHandle) {
         let _ = window.show();
         let _ = window.set_focus();
     }
+}
+
+/// Start recording a meeting (or ask for the user's consent first).
+#[tauri::command]
+pub fn start_meeting(app: AppHandle) {
+    meeting::start(&app);
+}
+
+/// Stop the meeting; the rest is transcribed and saved in the background.
+#[tauri::command]
+pub fn stop_meeting(app: AppHandle) {
+    meeting::stop(&app);
+}
+
+/// The current meeting (live or the last finished one), to seed the UI.
+#[tauri::command]
+pub fn meeting_state(app: AppHandle) -> meeting::MeetingView {
+    meeting::snapshot(&app)
+}
+
+/// Save a meeting transcript as Markdown in `<Documents>/WhisperAround` and
+/// open it. Returns the file's path.
+#[tauri::command]
+pub fn export_meeting(app: AppHandle, file_name: String, content: String) -> Result<String, String> {
+    meeting::export(&app, &file_name, &content)
 }
 
 const RELEASES_URL: &str = "https://github.com/dansaround/whisperaround/releases";

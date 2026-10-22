@@ -3,6 +3,9 @@
   "tray.show": "캡슐 보기",
   "tray.settings": "설정…",
   "tray.welcome": "시작하기…",
+  "tray.meetingStart": "회의 녹음 시작",
+  "tray.meetingStop": "회의 녹음 중지",
+  "tray.meetingTooltip": "WhisperAround — 회의 녹음 중",
   "tray.quit": "WhisperAround 종료",
   "window.welcomeTitle": "WhisperAround에 오신 것을 환영합니다",
   "error.mic.open": "마이크 오류: {error}",
@@ -77,6 +80,7 @@
   "shortcut.name.cancel": "녹음 취소",
   "shortcut.name.changeMode": "모드 변경",
   "shortcut.name.mouse": "마우스 단축키",
+  "shortcut.name.meeting": "회의 녹음",
   "shortcut.error.named": "{name}: {error}",
   "shortcut.error.unknownModifier": "알 수 없는 보조 키: '{key}'",
   "shortcut.error.invalidMouseButton": "유효하지 않은 마우스 버튼: '{button}'",
@@ -87,5 +91,11 @@
   "error.systemAudio.open": "시스템 오디오를 캡처할 수 없습니다: {error}",
   "error.systemAudio.noDevice": "사용 가능한 출력 장치가 없습니다",
   "error.systemAudio.config": "출력 장치의 설정을 읽을 수 없습니다: {error}",
-  "error.systemAudio.silent": "이 컴퓨터에서 재생되는 음성이 없습니다."
+  "error.systemAudio.silent": "이 컴퓨터에서 재생되는 음성이 없습니다.",
+
+  "meeting.title": "회의",
+  "meeting.me": "나",
+  "meeting.others": "상대방",
+  "meeting.error.chunk": "회의 일부를 텍스트로 변환할 수 없습니다: {error}",
+  "meeting.error.export": "회의를 저장할 수 없습니다: {error}"
 }

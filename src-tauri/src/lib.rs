@@ -10,6 +10,7 @@ mod local;
 mod macos;
 #[cfg(target_os = "macos")]
 mod macos_input;
+mod meeting;
 #[cfg(any(target_os = "macos", windows))]
 mod native_input;
 mod pipeline;
@@ -54,6 +55,7 @@ pub fn run() {
         .manage(AppState::new(Settings::default()))
         .manage(shortcuts::ShortcutState::default())
         .manage(history::HistoryState::default())
+        .manage(meeting::MeetingState::default())
         .setup(|app| {
             // Menu-bar app on macOS: no Dock icon or Cmd+Tab entry (the bundle's
             // Info.plist says the same; this covers `tauri dev`).
@@ -168,6 +170,10 @@ pub fn run() {
             commands::local_models,
             commands::download_model,
             commands::cancel_model_download,
+            commands::start_meeting,
+            commands::stop_meeting,
+            commands::meeting_state,
+            commands::export_meeting,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
@@ -218,6 +224,7 @@ fn setup_tray(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         .show_menu_on_left_click(false)
         .on_menu_event(|app, event| match event.id.as_ref() {
             "toggle" => pipeline::toggle(app),
+            "meeting" => meeting::toggle(app),
             "show" => show_pill(app),
             "settings" => commands::show_settings_window(app),
             "welcome" => commands::show_welcome_window(app),
@@ -243,18 +250,25 @@ fn tray_menu(app: &tauri::AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
     // "Toggle Recording" works regardless of window focus, so it doubles as a
     // background trigger when the global shortcut can't fire (e.g. under WSLg).
     let toggle = MenuItem::with_id(app, "toggle", i18n::t("tray.toggle"), true, None::<&str>)?;
+    let meeting_key = if meeting::recording(app) { "tray.meetingStop" } else { "tray.meetingStart" };
+    let meeting = MenuItem::with_id(app, "meeting", i18n::t(meeting_key), true, None::<&str>)?;
     let show = MenuItem::with_id(app, "show", i18n::t("tray.show"), true, None::<&str>)?;
     let settings = MenuItem::with_id(app, "settings", i18n::t("tray.settings"), true, None::<&str>)?;
     let welcome = MenuItem::with_id(app, "welcome", i18n::t("tray.welcome"), true, None::<&str>)?;
     let quit = MenuItem::with_id(app, "quit", i18n::t("tray.quit"), true, None::<&str>)?;
-    Menu::with_items(app, &[&toggle, &show, &settings, &welcome, &quit])
+    Menu::with_items(app, &[&toggle, &meeting, &show, &settings, &welcome, &quit])
 }
 
 /// Rebuild the tray menu after the UI language changed.
 pub fn refresh_tray(app: &tauri::AppHandle) {
-    if let (Some(tray), Ok(menu)) = (app.tray_by_id("main"), tray_menu(app)) {
+    let Some(tray) = app.tray_by_id("main") else {
+        return;
+    };
+    if let Ok(menu) = tray_menu(app) {
         let _ = tray.set_menu(Some(menu));
     }
+    let tooltip = if meeting::recording(app) { i18n::t("tray.meetingTooltip") } else { "WhisperAround".into() };
+    let _ = tray.set_tooltip(Some(tooltip));
 }
 
 /// Show the floating pill, re-pinned to its screen edge. With "always show"

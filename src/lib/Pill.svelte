@@ -11,6 +11,8 @@
     onSettingsChanged,
     onModeChanged,
     onNotice,
+    onMeeting,
+    getMeeting,
     onRevealPill,
     setModel,
     fitWindow,
@@ -22,6 +24,7 @@
   import { local } from "./localModels.svelte";
   import { chips } from "./shortcutFormat";
   import { t, td } from "./i18n/index.svelte";
+  import { clock } from "./meeting";
   import type { AppStatus, PillPosition, PillSkin, PillStyle, SettingsView } from "./types";
 
   // --- Backend-driven state -------------------------------------------------
@@ -47,6 +50,11 @@
   let modeToast = $state<string | null>(null);
   /** Backend notice (e.g. GPU fallback) flashed in the same toast. */
   let noticeToast = $state<string | null>(null);
+  /** Start of the meeting being recorded (unix ms), or null. Keeps the pill visible. */
+  let meetingTs = $state<number | null>(null);
+  /** Ticks every second while a meeting records, for the elapsed time. */
+  let now = $state(Date.now());
+  const meetingOn = $derived(meetingTs !== null);
   /** Tray "show pill" while auto-hidden: stay visible for a moment. */
   let revealed = $state(false);
   /** A fresh error stays visible for a while even with "always show" off. */
@@ -157,7 +165,7 @@
   const autoPanel = $derived(pillStyle === "classic" && busy);
   /** Auto-hidden: "always show" off and nothing worth showing. */
   const hidden = $derived(
-    !alwaysShow && !busy && !expanded && !menuOpen && !revealed && !modeToast && !noticeToast && !(status === "error" && errorFresh),
+    !alwaysShow && !busy && !expanded && !menuOpen && !revealed && !modeToast && !noticeToast && !meetingOn && !(status === "error" && errorFresh),
   );
 
   // Hidden pill: let clicks fall through to whatever is underneath.
@@ -195,7 +203,7 @@
   const target = $derived.by<Size>(() => {
     if (expanded || autoPanel) return { w: PANEL.w, h: menuOpen ? PANEL.h + 8 + MENU_H + 16 : PANEL.h };
     const tipH = POP_OFFSET + 44;
-    if (modeToast || noticeToast) return { w: COMPACT_W, h: tipH };
+    if (modeToast || noticeToast || (meetingOn && !menuOpen)) return { w: COMPACT_W, h: tipH };
     if (hidden) return IDLE;
     if (busy) return { w: COMPACT_W, h: tooltipBtn === "cancel" ? tipH : COMPACT_H };
     if (menuOpen) return { w: COMPACT_W, h: POP_OFFSET + MENU_H + 16 };
@@ -235,8 +243,20 @@
     skin = v.pillSkin;
   }
 
+  // Elapsed-time ticker, only while a meeting records.
+  $effect(() => {
+    if (!meetingOn) return;
+    now = Date.now();
+    const id = setInterval(() => (now = Date.now()), 1000);
+    return () => clearInterval(id);
+  });
+
   onMount(() => {
     local.init();
+    getMeeting()
+      .then((m) => (meetingTs = m.active && !m.finishing ? m.startedTs : null))
+      .catch((e) => console.error("getMeeting failed", e));
+    const unlistenMeeting = onMeeting((m) => (meetingTs = m.active && !m.finishing ? m.startedTs : null));
     getStatus()
       .then((s) => (status = s))
       .catch((e) => console.error("getStatus failed", e));
@@ -298,6 +318,7 @@
       unlistenSettings.then((fn) => fn());
       unlistenMode.then((fn) => fn());
       unlistenNotice.then((fn) => fn());
+      unlistenMeeting.then((fn) => fn());
       unlistenReveal.then((fn) => fn());
       clearTimeout(toastTimer);
       clearTimeout(revealTimer);
@@ -632,6 +653,11 @@
         <span class="tt-keys">{#each tooltip.keys as k (k)}<kbd>{k}</kbd>{/each}</span>
       {/if}
     </div>
+  {:else if meetingTs !== null && !expanded && !autoPanel && !menuOpen}
+    <div class="tooltip mode-toast meeting-badge" transition:pop={{ duration: 220 }}>
+      <span class="meeting-dot" aria-hidden="true"></span>
+      <span class="tt-text">{t("pill.meeting", { time: clock(now - meetingTs) })}</span>
+    </div>
   {/if}
 
   {#if menuOpen}{@render modelMenu(expanded || autoPanel ? "panel" : "compact")}{/if}
@@ -862,6 +888,16 @@
   .mode-dot.warn {
     background: #f59e0b;
     box-shadow: 0 0 8px rgba(245, 158, 11, 0.8);
+  }
+  .meeting-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #f87171;
+    animation: pulse 1.4s ease-out infinite;
+  }
+  .meeting-badge .tt-text {
+    font-variant-numeric: tabular-nums;
   }
   .notice-toast {
     max-width: 280px;

@@ -401,7 +401,6 @@ impl Recorder {
 
     /// New audio since the previous drain (or the start), per track,
     /// resampled to [`SAMPLE_RATE`]. Callable while recording.
-    #[allow(dead_code)] // for the meeting mode
     pub fn drain(&self) -> Vec<Track> {
         self.tracks.iter().map(|t| t.lock().unwrap().take()).collect()
     }

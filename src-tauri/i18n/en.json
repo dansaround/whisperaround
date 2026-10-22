@@ -3,6 +3,9 @@
   "tray.show": "Show pill",
   "tray.settings": "Settings…",
   "tray.welcome": "Welcome…",
+  "tray.meetingStart": "Start meeting recording",
+  "tray.meetingStop": "Stop meeting recording",
+  "tray.meetingTooltip": "WhisperAround — recording a meeting",
   "tray.quit": "Quit WhisperAround",
 
   "window.welcomeTitle": "Welcome to WhisperAround",
@@ -97,10 +100,17 @@
   "shortcut.name.cancel": "Cancel Recording",
   "shortcut.name.changeMode": "Change mode",
   "shortcut.name.mouse": "Mouse shortcut",
+  "shortcut.name.meeting": "Meeting recording",
   "shortcut.error.named": "{name}: {error}",
   "shortcut.error.unknownModifier": "unknown modifier key: '{key}'",
   "shortcut.error.invalidMouseButton": "invalid mouse button: '{button}'",
   "shortcut.error.invalid": "invalid shortcut: '{shortcut}'",
   "shortcut.error.duplicate": "'{name}' uses the same shortcut as '{other}'",
-  "shortcut.error.register": "Couldn't register '{shortcut}': {error}"
+  "shortcut.error.register": "Couldn't register '{shortcut}': {error}",
+
+  "meeting.title": "Meeting",
+  "meeting.me": "Me",
+  "meeting.others": "Others",
+  "meeting.error.chunk": "Part of the meeting couldn't be transcribed: {error}",
+  "meeting.error.export": "Couldn't save the meeting: {error}"
 }

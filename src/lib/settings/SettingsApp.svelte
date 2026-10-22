@@ -13,6 +13,7 @@
   import Sound from "./pages/Sound.svelte";
   import Models from "./pages/Models.svelte";
   import History from "./pages/History.svelte";
+  import Meetings from "./pages/Meetings.svelte";
   import { store } from "./store.svelte";
   import { IS_MAC, IS_WINDOWS, windowMaterial } from "../ipc";
   import type { WindowMaterial } from "../types";
@@ -22,7 +23,7 @@
   /** macOS always has its vibrancy; Windows reports whether Mica is on. */
   let material = $state<WindowMaterial>(IS_MAC ? "vibrancy" : "none");
 
-  const PAGES = { home: Home, modes: Modes, vocabulary: Vocabulary, configuration: Configuration, sound: Sound, models: Models, history: History };
+  const PAGES = { home: Home, modes: Modes, vocabulary: Vocabulary, configuration: Configuration, sound: Sound, models: Models, history: History, meetings: Meetings };
   const Page = $derived(PAGES[store.page]);
 
   const micOptions = $derived.by(() => {

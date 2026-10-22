@@ -3,6 +3,9 @@
   "tray.show": "Mostra capsula",
   "tray.settings": "Impostazioni…",
   "tray.welcome": "Benvenuto…",
+  "tray.meetingStart": "Avvia registrazione riunione",
+  "tray.meetingStop": "Interrompi registrazione riunione",
+  "tray.meetingTooltip": "WhisperAround — registrazione di una riunione",
   "tray.quit": "Esci da WhisperAround",
   "window.welcomeTitle": "Benvenuto in WhisperAround",
   "error.mic.open": "Errore del microfono: {error}",
@@ -77,6 +80,7 @@
   "shortcut.name.cancel": "Annulla registrazione",
   "shortcut.name.changeMode": "Cambia modalità",
   "shortcut.name.mouse": "Abbreviazione mouse",
+  "shortcut.name.meeting": "Registra riunione",
   "shortcut.error.named": "{name}: {error}",
   "shortcut.error.unknownModifier": "tasto modificatore sconosciuto: '{key}'",
   "shortcut.error.invalidMouseButton": "pulsante del mouse non valido: '{button}'",
@@ -87,5 +91,11 @@
   "error.systemAudio.open": "Impossibile catturare l'audio di sistema: {error}",
   "error.systemAudio.noDevice": "nessun dispositivo di uscita disponibile",
   "error.systemAudio.config": "impossibile leggere le impostazioni del dispositivo di uscita: {error}",
-  "error.systemAudio.silent": "Non era in riproduzione alcun suono su questo computer."
+  "error.systemAudio.silent": "Non era in riproduzione alcun suono su questo computer.",
+
+  "meeting.title": "Riunione",
+  "meeting.me": "Io",
+  "meeting.others": "Altri",
+  "meeting.error.chunk": "Non è stato possibile trascrivere parte della riunione: {error}",
+  "meeting.error.export": "Impossibile salvare la riunione: {error}"
 }

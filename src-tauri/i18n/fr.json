@@ -3,6 +3,9 @@
   "tray.show": "Afficher la pastille",
   "tray.settings": "Réglages…",
   "tray.welcome": "Bienvenue…",
+  "tray.meetingStart": "Démarrer l’enregistrement de réunion",
+  "tray.meetingStop": "Arrêter l’enregistrement de réunion",
+  "tray.meetingTooltip": "WhisperAround — enregistrement d’une réunion",
   "tray.quit": "Quitter WhisperAround",
   "window.welcomeTitle": "Bienvenue dans WhisperAround",
   "error.mic.open": "Erreur du micro : {error}",
@@ -77,6 +80,7 @@
   "shortcut.name.cancel": "Annuler l’enregistrement",
   "shortcut.name.changeMode": "Changer de mode",
   "shortcut.name.mouse": "Raccourci souris",
+  "shortcut.name.meeting": "Enregistrer une réunion",
   "shortcut.error.named": "{name} : {error}",
   "shortcut.error.unknownModifier": "touche de modification inconnue : '{key}'",
   "shortcut.error.invalidMouseButton": "bouton de souris non valide : '{button}'",
@@ -87,5 +91,11 @@
   "error.systemAudio.open": "Impossible de capturer l'audio du système : {error}",
   "error.systemAudio.noDevice": "aucun périphérique de sortie disponible",
   "error.systemAudio.config": "impossible de lire les paramètres du périphérique de sortie : {error}",
-  "error.systemAudio.silent": "Aucun son ne jouait sur cet ordinateur."
+  "error.systemAudio.silent": "Aucun son ne jouait sur cet ordinateur.",
+
+  "meeting.title": "Réunion",
+  "meeting.me": "Moi",
+  "meeting.others": "Autres",
+  "meeting.error.chunk": "Une partie de la réunion n’a pas pu être transcrite : {error}",
+  "meeting.error.export": "Impossible d’enregistrer la réunion : {error}"
 }

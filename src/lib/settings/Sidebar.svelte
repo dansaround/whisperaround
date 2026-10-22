@@ -17,7 +17,10 @@
       { id: "sound", label: "shell.nav.sound", icon: "speaker", color: "linear-gradient(180deg,#8e8e95,#6b6b72)" },
       { id: "models", label: "shell.nav.models", icon: "library", color: "linear-gradient(180deg,#8e8e95,#6b6b72)" },
     ],
-    [{ id: "history", label: "shell.nav.history", icon: "clock", color: "linear-gradient(180deg,#b36bff,#8b4cf0)" }],
+    [
+      { id: "meetings", label: "shell.nav.meetings", icon: "record", color: "linear-gradient(180deg,#ff6b6b,#e0352b)" },
+      { id: "history", label: "shell.nav.history", icon: "clock", color: "linear-gradient(180deg,#b36bff,#8b4cf0)" },
+    ],
   ];
 
   let nav: HTMLElement;

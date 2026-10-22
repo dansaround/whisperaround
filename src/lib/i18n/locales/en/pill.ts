@@ -7,6 +7,8 @@ export default {
     processing: "Transcribing…",
     error: "Something went wrong",
   },
+  /** Badge while a meeting is being recorded; {time} is e.g. "12:34". */
+  meeting: "Meeting {time}",
   /** Fallback when the backend reports an error without a message. */
   unknownError: "Unknown error",
   /** Text tooltips shown after a sustained hover on a compact-pill icon. */

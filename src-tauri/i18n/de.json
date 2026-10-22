@@ -3,6 +3,9 @@
   "tray.show": "Kapsel anzeigen",
   "tray.settings": "Einstellungen …",
   "tray.welcome": "Willkommen …",
+  "tray.meetingStart": "Meeting-Aufnahme starten",
+  "tray.meetingStop": "Meeting-Aufnahme beenden",
+  "tray.meetingTooltip": "WhisperAround — Meeting wird aufgenommen",
   "tray.quit": "WhisperAround beenden",
   "window.welcomeTitle": "Willkommen bei WhisperAround",
   "error.mic.open": "Mikrofonfehler: {error}",
@@ -77,6 +80,7 @@
   "shortcut.name.cancel": "Aufnahme abbrechen",
   "shortcut.name.changeMode": "Modus wechseln",
   "shortcut.name.mouse": "Maus-Kurzbefehl",
+  "shortcut.name.meeting": "Meeting aufnehmen",
   "shortcut.error.named": "{name}: {error}",
   "shortcut.error.unknownModifier": "unbekannte Sondertaste: '{key}'",
   "shortcut.error.invalidMouseButton": "ungültige Maustaste: '{button}'",
@@ -87,5 +91,11 @@
   "error.systemAudio.open": "Systemton konnte nicht erfasst werden: {error}",
   "error.systemAudio.noDevice": "kein Ausgabegerät verfügbar",
   "error.systemAudio.config": "Einstellungen des Ausgabegeräts konnten nicht gelesen werden: {error}",
-  "error.systemAudio.silent": "Auf diesem Computer war kein Ton zu hören."
+  "error.systemAudio.silent": "Auf diesem Computer war kein Ton zu hören.",
+
+  "meeting.title": "Meeting",
+  "meeting.me": "Ich",
+  "meeting.others": "Andere",
+  "meeting.error.chunk": "Ein Teil des Meetings konnte nicht transkribiert werden: {error}",
+  "meeting.error.export": "Meeting konnte nicht gespeichert werden: {error}"
 }

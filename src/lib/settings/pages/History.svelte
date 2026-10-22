@@ -5,7 +5,8 @@
   import Icon from "../ui/Icon.svelte";
   import Toggle from "../ui/Toggle.svelte";
   import { store } from "../store.svelte";
-  import { clearHistory, deleteHistoryEntry } from "../../ipc";
+  import { clearHistory, deleteHistoryEntry, exportMeeting } from "../../ipc";
+  import { meetingFileName, meetingMarkdown } from "../../meeting";
   import { modelLabel } from "../../models";
   import type { HistoryEntry } from "../../types";
   import { t, tn, intlLocale } from "../../i18n/index.svelte";
@@ -57,6 +58,15 @@
       setTimeout(() => copied === e.id && (copied = null), 1400);
     } catch {
       store.notify(t("history.copyFailed"), "error");
+    }
+  }
+
+  async function exportMd(e: HistoryEntry) {
+    try {
+      const path = await exportMeeting(meetingFileName(e.ts), meetingMarkdown(e));
+      store.notify(t("meetings.exported", { path }));
+    } catch (err) {
+      store.notify(String(err), "error");
     }
   }
 
@@ -113,10 +123,11 @@
           <div class="card list">
             {#each g.items as e (e.id)}
               <div class="entry" animate:flip={{ duration: 280, easing: cubicInOut }} out:slide={{ duration: 220, easing: cubicInOut }}>
-                <button class="text" class:clamp={expanded !== e.id} onclick={() => (expanded = expanded === e.id ? null : e.id)}>
+                <button class="text" class:clamp={expanded !== e.id} class:lines={e.meeting} onclick={() => (expanded = expanded === e.id ? null : e.id)}>
                   {e.text}
                 </button>
                 <div class="meta">
+                  {#if e.meeting}<span class="badge blue">{t("history.meeting")}</span>{/if}
                   <span>{time(e.ts)}</span>
                   {#if e.app}<span class="dot">·</span><span>{e.app}</span>{/if}
                   <span class="dot">·</span><span>{seconds(e.durationMs)}</span>
@@ -124,6 +135,9 @@
                   <span class="dot">·</span><span>{modelLabel(e.model)}</span>
                   <span class="spacer"></span>
                   <span class="tools">
+                    {#if e.meeting}
+                      <button class="icon-button" title={t("history.exportMd")} onclick={() => exportMd(e)}><Icon name="share" size={13} /></button>
+                    {/if}
                     <button class="icon-button" title={t("history.copy")} onclick={() => copy(e)}>
                       {#if copied === e.id}<span class="ok" in:fade={{ duration: 120 }}><Icon name="check" size={13} stroke={2.4} /></span>{:else}<Icon name="copy" size={13} />{/if}
                     </button>
@@ -240,6 +254,10 @@
   }
   .text:active {
     transform: none;
+  }
+  /* Meeting transcripts keep their line breaks. */
+  .lines {
+    white-space: pre-wrap;
   }
   .clamp {
     display: -webkit-box;

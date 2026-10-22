@@ -36,6 +36,8 @@ pub enum Action {
     CycleMode,
     /// Mouse button: tap toggles, hold records until release.
     Mouse,
+    /// Start or stop a meeting transcript.
+    Meeting,
 }
 
 /// A lone modifier key, left or right.
@@ -145,6 +147,7 @@ fn collect(settings: &Settings) -> Result<Vec<(Binding, Action)>, String> {
         (&settings.cancel_shortcut, Action::Cancel, "shortcut.name.cancel"),
         (&settings.mode_shortcut, Action::CycleMode, "shortcut.name.changeMode"),
         (&settings.mouse_shortcut, Action::Mouse, "shortcut.name.mouse"),
+        (&settings.meeting_shortcut, Action::Meeting, "shortcut.name.meeting"),
     ];
     let mut out: Vec<(Binding, Action)> = Vec::new();
     let mut names: Vec<String> = Vec::new();
@@ -329,6 +332,7 @@ pub fn fire(app: &AppHandle, action: Action, pressed: bool) {
             pipeline::cancel(app);
         }
         (Action::CycleMode, true) => crate::commands::cycle_mode(app),
+        (Action::Meeting, true) => crate::meeting::toggle(app),
         _ => {}
     }
 }

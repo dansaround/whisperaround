@@ -63,6 +63,9 @@ export interface SettingsView {
   modeShortcut: string;
   pttShortcut: string;
   mouseShortcut: string;
+  meetingShortcut: string;
+  /** The recording-consent notice was acknowledged. */
+  meetingConsent: boolean;
   autoPaste: boolean;
   theme: Theme;
   pillStyle: PillStyle;
@@ -96,6 +99,27 @@ export interface HistoryEntry {
   model: string;
   mode: string;
   app: string | null;
+  /** A meeting transcript: multi-line text with `[hh:mm:ss] Me: …` lines. */
+  meeting: boolean;
+}
+
+/** One transcribed stretch of a meeting. `speaker` is only set when mic and system audio were recorded separately. */
+export interface MeetingSegment {
+  startMs: number;
+  endMs: number;
+  speaker: "mic" | "system" | null;
+  text: string;
+}
+
+/** The meeting being recorded, or the last finished one (`meeting_state`, `meeting` event). */
+export interface MeetingView {
+  active: boolean;
+  /** Recording is over; the last chunks are being transcribed. */
+  finishing: boolean;
+  /** Unix time in ms. */
+  startedTs: number;
+  model: string;
+  segments: MeetingSegment[];
 }
 
 export interface HistoryStats {

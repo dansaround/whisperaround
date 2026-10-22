@@ -31,7 +31,7 @@
   ]);
   const languageOptions = LOCALES.map((l) => ({ value: l.code, label: l.label }));
 
-  type ShortcutKey = "shortcut" | "cancelShortcut" | "modeShortcut" | "pttShortcut" | "mouseShortcut";
+  type ShortcutKey = "shortcut" | "cancelShortcut" | "modeShortcut" | "pttShortcut" | "mouseShortcut" | "meetingShortcut";
   const SHORTCUTS: {
     key: ShortcutKey;
     title: Key;
@@ -47,6 +47,7 @@
     { key: "modeShortcut", title: "configuration.shortcuts.mode", sub: "configuration.shortcuts.modeSub", def: "Alt+Shift+KeyK" },
     { key: "pttShortcut", title: "configuration.shortcuts.ptt", sub: "configuration.shortcuts.pttSub", def: "" },
     { key: "mouseShortcut", title: "configuration.shortcuts.mouse", sub: "configuration.shortcuts.mouseSub", def: "", kind: "mouse", native: true },
+    { key: "meetingShortcut", title: "configuration.shortcuts.meeting", sub: "configuration.shortcuts.meetingSub", def: "" },
   ];
 
   function set(patch: SettingsPatch) {
