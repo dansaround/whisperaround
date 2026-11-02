@@ -21,3 +21,6 @@ src-tauri/gen
 .env
 .env.*
 graphify-out/
+
+# Video promocional (Remotion)
+video/

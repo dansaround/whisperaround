@@ -13,6 +13,8 @@
     onNotice,
     onMeeting,
     getMeeting,
+    startMeeting,
+    stopMeeting,
     onRevealPill,
     setModel,
     fitWindow,
@@ -44,7 +46,7 @@
   let expanded = $state(false);
   let hovered = $state(false); // mouse anywhere over the window
   /** Button whose text tooltip is shown (only after a sustained hover). */
-  let tooltipBtn = $state<null | "model" | "record" | "expand" | "cancel">(null);
+  let tooltipBtn = $state<null | "model" | "record" | "meeting" | "expand" | "cancel">(null);
   let menuOpen = $state(false);
   /** Mode name flashed after the "Change mode" shortcut. */
   let modeToast = $state<string | null>(null);
@@ -52,9 +54,11 @@
   let noticeToast = $state<string | null>(null);
   /** Start of the meeting being recorded (unix ms), or null. Keeps the pill visible. */
   let meetingTs = $state<number | null>(null);
+  let meetingActive = $state(false);
+  let meetingFinishing = $state(false);
   /** Ticks every second while a meeting records, for the elapsed time. */
   let now = $state(Date.now());
-  const meetingOn = $derived(meetingTs !== null);
+  const meetingOn = $derived(meetingActive && !meetingFinishing);
   /** Tray "show pill" while auto-hidden: stay visible for a moment. */
   let revealed = $state(false);
   /** A fresh error stays visible for a while even with "always show" off. */
@@ -196,6 +200,8 @@
         : { text: t("pill.tooltip.startRecording"), keys: keyParts(shortcut) };
     if (tooltipBtn === "cancel") return { text: t("pill.tooltip.cancel"), keys: keyParts(cancelShortcut) };
     if (tooltipBtn === "model") return { text: t("pill.tooltip.model"), keys: [] };
+    if (tooltipBtn === "meeting")
+      return { text: meetingFinishing ? t("meetings.finishing") : meetingOn ? t("meetings.stop") : t("meetings.start"), keys: [] };
     return { text: t("pill.tooltip.expand"), keys: [] };
   });
 
@@ -254,16 +260,42 @@
   onMount(() => {
     local.init();
     getMeeting()
-      .then((m) => (meetingTs = m.active && !m.finishing ? m.startedTs : null))
+      .then((m) => {
+        meetingActive = m.active;
+        meetingFinishing = m.finishing;
+        meetingTs = m.active && !m.finishing ? m.startedTs : null;
+      })
       .catch((e) => console.error("getMeeting failed", e));
-    const unlistenMeeting = onMeeting((m) => (meetingTs = m.active && !m.finishing ? m.startedTs : null));
+    const unlistenMeeting = onMeeting((m) => {
+      meetingActive = m.active;
+      meetingFinishing = m.finishing;
+      meetingTs = m.active && !m.finishing ? m.startedTs : null;
+    });
     getStatus()
       .then((s) => (status = s))
       .catch((e) => console.error("getStatus failed", e));
-    loadSettings()
-      .then(applySettings)
-      .catch((e) => console.error("loadSettings failed", e));
-    const unlistenSettings = onSettingsChanged(applySettings);
+    // Subscribe before loading the initial snapshot. Otherwise a settings
+    // update can land between these two async operations and be overwritten
+    // by the stale result of `loadSettings()` (the pill then disagrees with
+    // the settings window until another change is made).
+    let settingsEvents = 0;
+    const unlistenSettings = onSettingsChanged((v) => {
+      settingsEvents += 1;
+      applySettings(v);
+    });
+    const loadInitialSettings = async () => {
+      try {
+        // `onSettingsChanged` performs async listener registration in Tauri.
+        // Wait until it is live before taking the initial snapshot.
+        await unlistenSettings;
+        const v = await loadSettings();
+        // An event is a newer authoritative snapshot than the initial read.
+        if (settingsEvents === 0) applySettings(v);
+      } catch (e) {
+        console.error("loadSettings failed", e);
+      }
+    };
+    loadInitialSettings();
     const unlistenMode = onModeChanged((name) => {
       modeToast = name;
       clearTimeout(toastTimer);
@@ -385,7 +417,7 @@
     }, LEAVE_DELAY);
   }
 
-  function enterBtn(which: "model" | "record" | "expand" | "cancel") {
+  function enterBtn(which: "model" | "record" | "meeting" | "expand" | "cancel") {
     clearTimeout(tipTimer);
     tipTimer = setTimeout(() => (tooltipBtn = which), TOOLTIP_DELAY);
   }
@@ -398,6 +430,17 @@
   function record() {
     menuOpen = false;
     toggleRecording();
+  }
+
+  function toggleMeeting() {
+    menuOpen = false;
+    if (meetingFinishing) return;
+    const action = meetingOn ? stopMeeting : startMeeting;
+    action().catch((e) => {
+      noticeToast = String(e);
+      clearTimeout(noticeTimer);
+      noticeTimer = setTimeout(() => (noticeToast = null), 4000);
+    });
   }
 
   function chooseModel(id: string) {
@@ -485,6 +528,12 @@
 {#snippet expandIcon()}
   <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H3v-6M21 9V3h-6M3 21l7-7M21 3l-7 7"/></svg>
 {/snippet}
+{#snippet conferenceIcon()}
+  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="8" r="2.5"/><circle cx="6.5" cy="9.5" r="2"/><circle cx="17.5" cy="9.5" r="2"/>
+    <path d="M7.5 18c.3-2.6 1.8-4 4.5-4s4.2 1.4 4.5 4M2.5 18c.2-2 1.3-3 3-3 .8 0 1.5.2 2 .7M21.5 18c-.2-2-1.3-3-3-3-.8 0-1.5.2-2 .7"/>
+  </svg>
+{/snippet}
 {#snippet collapseIcon()}
   <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10h6V4M20 14h-6v6M14 10l7-7M10 14l-7 7"/></svg>
 {/snippet}
@@ -555,6 +604,19 @@
         }}
       >
         {@render recordIcon()}
+      </button>
+      <button
+        class="icon-btn meeting"
+        class:active={meetingOn}
+        aria-label={meetingFinishing ? t("meetings.finishing") : meetingOn ? t("meetings.stop") : t("meetings.start")}
+        onmouseenter={() => enterBtn("meeting")}
+        onmouseleave={leaveBtn}
+        onclick={(e) => {
+          e.stopPropagation();
+          toggleMeeting();
+        }}
+      >
+        {@render conferenceIcon()}
       </button>
       <button
         class="icon-btn side"
@@ -829,6 +891,10 @@
   }
   .icon-btn.record:hover {
     background: color-mix(in srgb, var(--pill-hover) 100%, var(--pill-text) 12%);
+  }
+  .icon-btn.meeting.active {
+    background: color-mix(in srgb, var(--pill-hover) 100%, #7ee36b 22%);
+    color: #a7f39a;
   }
   .rec-layer {
     gap: 9px;
