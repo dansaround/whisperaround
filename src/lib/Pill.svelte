@@ -133,6 +133,8 @@
   /** Where tooltips / the compact menu start (below the pill), CSS px. */
   const POP_OFFSET = 56;
   const PANEL: Size = { w: 500, h: 158 };
+  /** Transparent breathing room so the expanded shell and its shadow never touch the window edge. */
+  const PANEL_FRAME = 8;
   const MENU_H = 216;
 
   /** The morphing shell's shape for each visual state (CSS px). */
@@ -140,7 +142,7 @@
   type Shape = { w: number; h: number; r: number; top: number };
   const SHELL: Record<Visual, Shape> = {
     idle: { w: 50, h: 22, r: 11, top: 4 },
-    icons: { w: 110, h: 40, r: 20, top: 4 },
+    icons: { w: 116, h: 40, r: 20, top: 4 },
     rec: { w: 104, h: 40, r: 20, top: 4 },
     proc: { w: 56, h: 40, r: 20, top: 4 },
     panel: { w: PANEL.w, h: PANEL.h, r: 16, top: 0 },
@@ -207,7 +209,8 @@
 
   /** Window size that fits everything currently shown. */
   const target = $derived.by<Size>(() => {
-    if (expanded || autoPanel) return { w: PANEL.w, h: menuOpen ? PANEL.h + 8 + MENU_H + 16 : PANEL.h };
+    if (expanded || autoPanel)
+      return { w: PANEL.w + PANEL_FRAME * 2, h: menuOpen ? PANEL.h + 8 + MENU_H + 16 : PANEL.h };
     const tipH = POP_OFFSET + 44;
     if (modeToast || noticeToast || (meetingOn && !menuOpen)) return { w: COMPACT_W, h: tipH };
     if (hidden) return IDLE;
@@ -520,16 +523,16 @@
 
 <!-- Inline icons (kept tiny and dependency-free). -->
 {#snippet sparkleIcon()}
-  <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 2l1.8 5.6a4 4 0 0 0 2.6 2.6L22 12l-5.6 1.8a4 4 0 0 0-2.6 2.6L12 22l-1.8-5.6a4 4 0 0 0-2.6-2.6L2 12l5.6-1.8a4 4 0 0 0 2.6-2.6L12 2z"/></svg>
+  <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 2l1.8 5.6a4 4 0 0 0 2.6 2.6L22 12l-5.6 1.8a4 4 0 0 0-2.6 2.6L12 22l-1.8-5.6a4 4 0 0 0-2.6-2.6L2 12l5.6-1.8a4 4 0 0 0 2.6-2.6L12 2z"/></svg>
 {/snippet}
 {#snippet recordIcon()}
-  <svg viewBox="0 0 24 24" width="16" height="16"><rect x="8.5" y="2" width="7" height="12.5" rx="3.5" fill="currentColor"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3.5M8.5 21.5h7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+  <svg viewBox="0 0 24 24" width="14" height="14"><rect x="8.5" y="2" width="7" height="12.5" rx="3.5" fill="currentColor"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3.5M8.5 21.5h7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
 {/snippet}
 {#snippet expandIcon()}
-  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H3v-6M21 9V3h-6M3 21l7-7M21 3l-7 7"/></svg>
+  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H3v-6M21 9V3h-6M3 21l7-7M21 3l-7 7"/></svg>
 {/snippet}
 {#snippet conferenceIcon()}
-  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
     <circle cx="12" cy="8" r="2.5"/><circle cx="6.5" cy="9.5" r="2"/><circle cx="17.5" cy="9.5" r="2"/>
     <path d="M7.5 18c.3-2.6 1.8-4 4.5-4s4.2 1.4 4.5 4M2.5 18c.2-2 1.3-3 3-3 .8 0 1.5.2 2 .7M21.5 18c-.2-2-1.3-3-3-3-.8 0-1.5.2-2 .7"/>
   </svg>
@@ -861,8 +864,8 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 30px;
-    height: 30px;
+    width: 27px;
+    height: 27px;
     padding: 0;
     border: none;
     border-radius: 999px;
