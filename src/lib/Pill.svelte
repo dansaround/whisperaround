@@ -52,6 +52,14 @@
   let modeToast = $state<string | null>(null);
   /** Backend notice (e.g. GPU fallback) flashed in the same toast. */
   let noticeToast = $state<string | null>(null);
+  let noticeEl = $state<HTMLDivElement | null>(null);
+  /** Rendered size of the notice toast, CSS px. */
+  let noticeSize = $state<Size>({ w: 0, h: 0 });
+  /** Ms left before the notice hides, and when the current countdown started. */
+  let noticeLeft = 0;
+  let noticeTick = 0;
+  /** Pointer is over the notice: its countdown is paused. */
+  let noticeHovered = false;
   /** Start of the meeting being recorded (unix ms), or null. Keeps the pill visible. */
   let meetingTs = $state<number | null>(null);
   let meetingActive = $state(false);
@@ -132,6 +140,14 @@
   const COMPACT_H = 58;
   /** Where tooltips / the compact menu start (below the pill), CSS px. */
   const POP_OFFSET = 56;
+  /** Notice toast: longest single line, 70 % of the screen width. */
+  const NOTICE_MAX_W = Math.round(window.screen.availWidth * 0.7);
+  /** Room around the notice toast so its box-shadow fits the window. */
+  const NOTICE_MARGIN = 12;
+  /** Notice dismissal: a base time plus a little per character, capped. */
+  const NOTICE_BASE_MS = 4000;
+  const NOTICE_MS_PER_CHAR = 30;
+  const NOTICE_MAX_MS = 10000;
   const PANEL: Size = { w: 500, h: 158 };
   /** Transparent breathing room so the expanded shell and its shadow never touch the window edge. */
   const PANEL_FRAME = 8;
@@ -212,13 +228,33 @@
     if (expanded || autoPanel)
       return { w: PANEL.w + PANEL_FRAME * 2, h: menuOpen ? PANEL.h + 8 + MENU_H + 16 : PANEL.h };
     const tipH = POP_OFFSET + 44;
-    if (modeToast || noticeToast || (meetingOn && !menuOpen)) return { w: COMPACT_W, h: tipH };
+    if (noticeToast) {
+      // Sized to the rendered toast; it sits below the pill (or above it when `bottom`).
+      return { w: Math.max(COMPACT_W, noticeSize.w + NOTICE_MARGIN * 2), h: POP_OFFSET + noticeSize.h + NOTICE_MARGIN };
+    }
+    if (modeToast || (meetingOn && !menuOpen)) return { w: COMPACT_W, h: tipH };
     if (hidden) return IDLE;
     if (busy) return { w: COMPACT_W, h: tooltipBtn === "cancel" ? tipH : COMPACT_H };
     if (menuOpen) return { w: COMPACT_W, h: POP_OFFSET + MENU_H + 16 };
     if (tooltipBtn) return { w: COMPACT_W, h: tipH };
     if (hovered) return { w: COMPACT_W, h: COMPACT_H };
     return IDLE;
+  });
+
+  // Track the notice toast's rendered size. Offset sizes are layout sizes, so
+  // the window clipping the toast doesn't change them.
+  $effect(() => {
+    const el = noticeEl;
+    if (!el) {
+      // Hidden under the pointer (e.g. the panel opened): no leave event comes.
+      if (noticeHovered) resumeNotice();
+      return;
+    }
+    const measure = () => (noticeSize = { w: el.offsetWidth, h: el.offsetHeight });
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
   });
 
   // Grow the window *before* the shell morphs (so nothing gets clipped) and
@@ -304,11 +340,7 @@
       clearTimeout(toastTimer);
       toastTimer = setTimeout(() => (modeToast = null), 1600);
     });
-    const unlistenNotice = onNotice((text) => {
-      noticeToast = text;
-      clearTimeout(noticeTimer);
-      noticeTimer = setTimeout(() => (noticeToast = null), 4000);
-    });
+    const unlistenNotice = onNotice((text) => showNotice(text));
     const unlistenReveal = onRevealPill(() => {
       revealed = true;
       clearTimeout(revealTimer);
@@ -439,11 +471,7 @@
     menuOpen = false;
     if (meetingFinishing) return;
     const action = meetingOn ? stopMeeting : startMeeting;
-    action().catch((e) => {
-      noticeToast = String(e);
-      clearTimeout(noticeTimer);
-      noticeTimer = setTimeout(() => (noticeToast = null), 4000);
-    });
+    action().catch((e) => showNotice(String(e)));
   }
 
   function chooseModel(id: string) {
@@ -482,6 +510,41 @@
     e.stopPropagation();
     tooltipBtn = null;
     cancelRecording();
+  }
+
+  /** Flash a notice; longer texts stay up longer. */
+  function showNotice(text: string) {
+    noticeToast = text;
+    noticeLeft = Math.min(NOTICE_MAX_MS, NOTICE_BASE_MS + NOTICE_MS_PER_CHAR * text.length);
+    armNotice();
+  }
+
+  /** (Re)start the dismissal countdown, unless the pointer is on the notice. */
+  function armNotice() {
+    clearTimeout(noticeTimer);
+    noticeTimer = undefined;
+    if (noticeHovered) return;
+    noticeTick = Date.now();
+    noticeTimer = setTimeout(() => {
+      noticeTimer = undefined;
+      noticeToast = null;
+    }, noticeLeft);
+  }
+
+  function pauseNotice() {
+    noticeHovered = true;
+    if (noticeTimer === undefined) return;
+    clearTimeout(noticeTimer);
+    noticeTimer = undefined;
+    noticeLeft -= Date.now() - noticeTick;
+  }
+
+  function resumeNotice() {
+    noticeHovered = false;
+    if (!noticeToast) return;
+    // Leave the reader at least a moment after the pointer moves off.
+    noticeLeft = Math.max(noticeLeft, 1000);
+    armNotice();
   }
 </script>
 
@@ -702,7 +765,15 @@
   </div>
 
   {#if noticeToast && !expanded && !autoPanel}
-    <div class="tooltip mode-toast notice-toast" transition:pop={{ duration: 220 }}>
+    <div
+      class="tooltip mode-toast notice-toast"
+      role="status"
+      bind:this={noticeEl}
+      style="--notice-max-w:{NOTICE_MAX_W}px"
+      onpointerenter={pauseNotice}
+      onpointerleave={resumeNotice}
+      transition:pop={{ duration: 220 }}
+    >
       <span class="mode-dot warn" aria-hidden="true"></span>
       <span class="tt-text">{noticeToast}</span>
     </div>
@@ -969,9 +1040,22 @@
     font-variant-numeric: tabular-nums;
   }
   .notice-toast {
-    max-width: 280px;
+    /* Fits its text on one line up to --notice-max-w, independent of the window. */
+    width: max-content;
+    min-width: 280px;
+    max-width: var(--notice-max-w);
     white-space: normal;
+    line-height: 1.4;
     border-radius: 12px;
+  }
+  /* Long notices (paths) wrap, and scroll past three lines. */
+  .notice-toast .tt-text {
+    min-width: 0;
+    max-height: calc(3 * 1.4em);
+    overflow-y: auto;
+    overflow-wrap: anywhere;
+    scrollbar-width: thin;
+    scrollbar-color: var(--pill-line) transparent;
   }
   .tt-text {
     font-weight: 500;
