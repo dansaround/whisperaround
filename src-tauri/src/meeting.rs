@@ -21,6 +21,7 @@ use anyhow::Result;
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager};
 
+use crate::echo::EchoCanceller;
 use crate::history::{self, Entry};
 use crate::i18n::{t, tf};
 use crate::recorder::{self, Recorder, Track, TrackKind, SAMPLE_RATE};
@@ -205,8 +206,76 @@ impl Pending {
     }
 }
 
+/// Raw and processed audio of a mix, kept to debug the echo suppression.
+#[derive(Default)]
+struct Dump {
+    mic_raw: Vec<f32>,
+    system: Vec<f32>,
+    mic_aec: Vec<f32>,
+}
+
+/// Keeps the speakers out of the microphone track of a mix. Echo suppression
+/// needs both tracks on one timeline, so it runs on what is drained, before
+/// the tracks are cut into chunks one by one.
+struct EchoFilter {
+    /// `None` when the echo suppression is off: the microphone passes as is.
+    canceller: Option<EchoCanceller>,
+    /// Stream generations of the microphone and the system track when last fed.
+    generations: Option<(u64, u64)>,
+    dump: Option<Dump>,
+}
+
+impl EchoFilter {
+    fn new(cancel: bool, dump: bool) -> Self {
+        Self {
+            canceller: cancel.then(EchoCanceller::new),
+            generations: None,
+            dump: dump.then(Dump::default),
+        }
+    }
+
+    /// Replace the microphone samples of freshly drained `tracks` by the ones
+    /// that are ready; the rest follows with later drains and [`Self::finish`].
+    fn apply(&mut self, tracks: &mut [Track]) {
+        let position = |kind| tracks.iter().position(|t| t.kind == kind);
+        let (Some(mic), Some(system)) = (position(TrackKind::Mic), position(TrackKind::System)) else {
+            return;
+        };
+        // A new stream may have a different echo path (and delay).
+        let generations = (tracks[mic].generation, tracks[system].generation);
+        if let Some(canceller) = self.canceller.as_mut().filter(|_| self.generations.is_some_and(|g| g != generations)) {
+            canceller.reset();
+        }
+        self.generations = Some(generations);
+
+        let raw = std::mem::take(&mut tracks[mic].samples);
+        let ready = match self.canceller.as_mut() {
+            Some(canceller) => canceller.process(&raw, &tracks[system].samples),
+            None => raw.clone(),
+        };
+        if let Some(dump) = self.dump.as_mut() {
+            dump.mic_raw.extend_from_slice(&raw);
+            dump.system.extend_from_slice(&tracks[system].samples);
+            dump.mic_aec.extend_from_slice(&ready);
+        }
+        tracks[mic].samples = ready;
+    }
+
+    /// The microphone samples still held back, once the recording is over.
+    fn finish(&mut self) -> Vec<f32> {
+        let rest = self.canceller.as_mut().map(EchoCanceller::flush).unwrap_or_default();
+        if let Some(dump) = self.dump.as_mut() {
+            dump.mic_aec.extend_from_slice(&rest);
+        }
+        rest
+    }
+}
+
 /// Add freshly drained audio to the pending buffers (created on first use).
-fn feed(pending: &mut Vec<Pending>, tracks: Vec<Track>, two_tracks: bool) {
+fn feed(pending: &mut Vec<Pending>, mut tracks: Vec<Track>, two_tracks: bool, echo: &mut EchoFilter) {
+    if two_tracks {
+        echo.apply(&mut tracks);
+    }
     for (i, track) in tracks.into_iter().enumerate() {
         if pending.len() <= i {
             pending.push(Pending {
@@ -219,9 +288,15 @@ fn feed(pending: &mut Vec<Pending>, tracks: Vec<Track>, two_tracks: bool) {
     }
 }
 
+/// What the chunker leaves behind when the recording ends.
+#[derive(Default)]
+struct Recorded {
+    duration_ms: u64,
+    dump: Option<Dump>,
+}
+
 /// Drain the recorder until asked to stop, cutting chunks as they become due.
-/// Returns the length of the recording in ms.
-fn run_chunker(rec: Recorder, stop: &AtomicBool, tx: Sender<Chunk>) -> u64 {
+fn run_chunker(rec: Recorder, stop: &AtomicBool, tx: Sender<Chunk>, mut echo: EchoFilter) -> Recorded {
     let two_tracks = matches!(rec.source(), recorder::Source::Mix(_));
     let mut pending: Vec<Pending> = Vec::new();
     while !stop.load(Ordering::Relaxed) {
@@ -231,15 +306,21 @@ fn run_chunker(rec: Recorder, stop: &AtomicBool, tx: Sender<Chunk>) -> u64 {
             thread::sleep(Duration::from_millis(100));
             slept += Duration::from_millis(100);
         }
-        feed(&mut pending, rec.drain(), two_tracks);
+        feed(&mut pending, rec.drain(), two_tracks, &mut echo);
         pending.iter_mut().for_each(|p| p.cut(&tx));
     }
     match rec.stop() {
-        Ok(rest) => feed(&mut pending, rest.tracks, two_tracks),
+        Ok(rest) => feed(&mut pending, rest.tracks, two_tracks, &mut echo),
         Err(e) => eprintln!("[whisperaround] stopping the meeting recorder: {e}"),
     }
+    if let Some(mic) = pending.iter_mut().find(|p| p.speaker == Some(TrackKind::Mic)) {
+        mic.buf.extend(echo.finish());
+    }
     pending.iter_mut().for_each(|p| p.flush(&tx));
-    ms_of(pending.iter().map(Pending::len).max().unwrap_or(0))
+    Recorded {
+        duration_ms: ms_of(pending.iter().map(Pending::len).max().unwrap_or(0)),
+        dump: echo.dump,
+    }
 }
 
 /// Transcribe one chunk with the model chosen when the meeting started.
@@ -253,7 +334,7 @@ fn transcribe_chunk(app: &AppHandle, job: &Job, samples: &[f32]) -> Result<Strin
 }
 
 /// Transcribe the chunks as they arrive, then record the finished meeting.
-fn run_transcriber(app: AppHandle, rx: Receiver<Chunk>, chunker: JoinHandle<u64>, job: Job) {
+fn run_transcriber(app: AppHandle, rx: Receiver<Chunk>, chunker: JoinHandle<Recorded>, job: Job) {
     for chunk in rx {
         if is_quiet(&chunk.samples) {
             continue;
@@ -278,12 +359,13 @@ fn run_transcriber(app: AppHandle, rx: Receiver<Chunk>, chunker: JoinHandle<u64>
             }
         }
     }
-    let duration_ms = chunker.join().unwrap_or(0);
-    finish(&app, &job, duration_ms);
+    let recorded = chunker.join().unwrap_or_default();
+    finish(&app, &job, recorded);
 }
 
 /// Record the transcript and make the meeting inactive again.
-fn finish(app: &AppHandle, job: &Job, duration_ms: u64) {
+fn finish(app: &AppHandle, job: &Job, recorded: Recorded) {
+    let Recorded { duration_ms, dump } = recorded;
     let view = app.state::<MeetingState>().0.lock().unwrap().view.clone();
     if !view.segments.is_empty() {
         let entry = Entry {
@@ -299,7 +381,7 @@ fn finish(app: &AppHandle, job: &Job, duration_ms: u64) {
         };
         history::record(app, entry, job.save_history);
         if job.autosave {
-            autosave(app, &view, duration_ms, &job.date_format, &job.name);
+            autosave(app, &view, duration_ms, &job.date_format, &job.name, dump.as_ref());
         }
     }
     {
@@ -415,8 +497,9 @@ pub fn start(app: &AppHandle) {
     };
     drop(inner);
 
+    let echo = EchoFilter::new(settings.echo_cancel, settings.meeting_audio_dump);
     let (tx, rx) = mpsc::channel();
-    let chunker = thread::spawn(move || run_chunker(rec, &stop, tx));
+    let chunker = thread::spawn(move || run_chunker(rec, &stop, tx, echo));
     let handle = app.clone();
     thread::spawn(move || run_transcriber(handle, rx, chunker, job));
     emit(app);
@@ -549,11 +632,28 @@ fn date_text(time: &chrono::DateTime<chrono::Local>, format: &str) -> String {
     }
 }
 
+/// Write the audio of `dump` next to the transcript at `path`, as
+/// `<name>.mic_raw.wav`, `<name>.system.wav` and `<name>.mic_aec.wav`.
+fn save_dump(path: &Path, dump: &Dump) {
+    for (suffix, samples) in [("mic_raw", &dump.mic_raw), ("system", &dump.system), ("mic_aec", &dump.mic_aec)] {
+        let target = path.with_extension(format!("{suffix}.wav"));
+        let written = recorder::encode_wav(samples).map_err(|e| e.to_string()).and_then(|wav| std::fs::write(&target, wav).map_err(|e| e.to_string()));
+        if let Err(e) = written {
+            eprintln!("[whisperaround] saving {}: {e}", target.display());
+        }
+    }
+}
+
 /// Save a finished meeting in the meetings folder and say where.
-fn autosave(app: &AppHandle, view: &MeetingView, duration_ms: u64, date_format: &str, name: &str) {
+fn autosave(app: &AppHandle, view: &MeetingView, duration_ms: u64, date_format: &str, name: &str, dump: Option<&Dump>) {
     let (file_name, content) = markdown(view, duration_ms, date_format, name);
     let notice = match save(app, &file_name, &content) {
-        Ok(path) => tf("meeting.saved", &[("path", &path.display())]),
+        Ok(path) => {
+            if let Some(dump) = dump {
+                save_dump(&path, dump);
+            }
+            tf("meeting.saved", &[("path", &path.display())])
+        }
         Err(e) => e,
     };
     let _ = app.emit("notice", notice);
@@ -652,6 +752,57 @@ mod tests {
         assert_eq!(chunks[0].start_ms, 0);
         assert_eq!(chunks[1].start_ms, ms_of(chunks[0].samples.len()));
         assert_eq!(chunks.iter().map(|c| c.samples.len()).sum::<usize>(), 75 * SR);
+    }
+
+    /// Both tracks of a mix, `n` samples of `level` each, in stream `generation`.
+    fn mix(n: usize, level: f32, generation: u64) -> Vec<Track> {
+        [TrackKind::Mic, TrackKind::System]
+            .map(|kind| Track { kind, samples: vec![level; n], generation })
+            .into()
+    }
+
+    #[test]
+    fn feeding_through_the_echo_filter_keeps_lengths_and_offsets() {
+        let mut echo = EchoFilter::new(true, true);
+        let mut pending = Vec::new();
+        let drains = [15_900, 16_100, 16_000, 7_777, 16_000];
+        for (i, n) in drains.into_iter().enumerate() {
+            // The stream of the microphone is reopened halfway.
+            feed(&mut pending, mix(n, 0.2, 1 + (i >= 2) as u64), true, &mut echo);
+        }
+        let total: usize = drains.iter().sum();
+        let (tx, rx) = mpsc::channel();
+        pending[0].buf.extend(echo.finish());
+        // Held back by the lookahead, never ahead of the input.
+        assert!(pending[0].len() <= total);
+        assert_eq!(pending[1].len(), total);
+        pending.iter_mut().for_each(|p| p.flush(&tx));
+        assert_eq!(pending[0].len(), total);
+        assert_eq!(pending[0].speaker, Some(TrackKind::Mic));
+        assert_eq!(pending[1].speaker, Some(TrackKind::System));
+        // Nothing couples the tracks, so the microphone is unchanged.
+        let chunks: Vec<Chunk> = rx.try_iter().collect();
+        assert_eq!(chunks.len(), 2);
+        assert!(chunks.iter().all(|c| c.start_ms == 0 && c.samples.len() == total));
+        assert!(chunks[0].samples.iter().all(|&s| s == 0.2));
+        let dump = echo.dump.unwrap();
+        assert_eq!((dump.mic_raw.len(), dump.system.len(), dump.mic_aec.len()), (total, total, total));
+    }
+
+    #[test]
+    fn feeding_without_the_filter_or_a_mix_leaves_tracks_alone() {
+        let mut pending = Vec::new();
+        let mut off = EchoFilter::new(false, false);
+        feed(&mut pending, mix(1_000, 0.1, 1), true, &mut off);
+        assert_eq!((pending[0].len(), pending[1].len()), (1_000, 1_000));
+        assert!(off.finish().is_empty());
+
+        let mut single = Vec::new();
+        let mut on = EchoFilter::new(true, false);
+        let mic = vec![Track { kind: TrackKind::Mic, samples: vec![0.1; 500], generation: 1 }];
+        feed(&mut single, mic, false, &mut on);
+        assert_eq!(single[0].len(), 500);
+        assert_eq!(single[0].speaker, None);
     }
 
     #[test]

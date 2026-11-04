@@ -78,6 +78,14 @@ pub struct Settings {
     /// Name in the meeting file names; empty = the translated 'Meeting'.
     #[serde(default)]
     pub meeting_name: String,
+    /// Keep the system audio out of the microphone track of a meeting (for
+    /// speakers without headphones).
+    #[serde(default = "default_true")]
+    pub echo_cancel: bool,
+    /// Save the raw and processed meeting audio next to the transcript, to
+    /// debug the echo suppression.
+    #[serde(default)]
+    pub meeting_audio_dump: bool,
 
     // --- Appearance ---------------------------------------------------------
     /// `auto` | `light` | `dark`.

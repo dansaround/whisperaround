@@ -71,6 +71,9 @@ pub enum TrackKind {
 pub struct Track {
     pub kind: TrackKind,
     pub samples: Vec<f32>,
+    /// Counts the times the track's stream was reopened on another device, so
+    /// a listener can tell that what it learned about the signal path is stale.
+    pub generation: u64,
 }
 
 /// The captured audio, one [`Track`] per source.
@@ -176,6 +179,8 @@ struct TrackBuf {
     done: Vec<f32>,
     /// Mono samples at `rate` not resampled yet.
     pending: Vec<f32>,
+    /// Streams opened on this track so far.
+    generation: u64,
 }
 
 type SharedTrack = Arc<Mutex<TrackBuf>>;
@@ -189,6 +194,7 @@ impl TrackBuf {
             drained: 0,
             done: Vec::new(),
             pending: Vec::new(),
+            generation: 0,
         }
     }
 
@@ -218,10 +224,12 @@ impl TrackBuf {
         self.pending.extend_from_slice(chunk);
     }
 
-    /// Continue with a device running at `rate`. Audio so far keeps its old rate.
+    /// Continue with a new stream, on a device running at `rate`. Audio so far
+    /// keeps its old rate.
     fn set_rate(&mut self, rate: u32) {
         self.flush();
         self.rate = rate;
+        self.generation += 1;
     }
 
     /// Take everything not drained yet, at [`SAMPLE_RATE`].
@@ -232,6 +240,7 @@ impl TrackBuf {
         Track {
             kind: self.kind,
             samples: std::mem::take(&mut self.done),
+            generation: self.generation,
         }
     }
 }
@@ -588,6 +597,7 @@ mod tests {
         Track {
             kind,
             samples: samples.to_vec(),
+            generation: 0,
         }
     }
 
