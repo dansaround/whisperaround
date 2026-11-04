@@ -214,6 +214,8 @@ pub struct SettingsView {
     pub meeting_autosave: bool,
     pub meeting_date_format: String,
     pub meeting_name: String,
+    pub echo_cancel: bool,
+    pub meeting_audio_dump: bool,
     pub auto_paste: bool,
     pub theme: String,
     pub pill_style: String,
@@ -251,6 +253,8 @@ pub struct SettingsPatch {
     pub meeting_autosave: Option<bool>,
     pub meeting_date_format: Option<String>,
     pub meeting_name: Option<String>,
+    pub echo_cancel: Option<bool>,
+    pub meeting_audio_dump: Option<bool>,
     pub auto_paste: Option<bool>,
     pub theme: Option<String>,
     pub pill_style: Option<String>,
@@ -423,6 +427,12 @@ impl Settings {
             }
             self.meeting_name = v.trim().chars().take(60).collect();
         }
+        if let Some(v) = patch.echo_cancel {
+            self.echo_cancel = v;
+        }
+        if let Some(v) = patch.meeting_audio_dump {
+            self.meeting_audio_dump = v;
+        }
         if let Some(v) = patch.auto_paste {
             self.auto_paste = v;
         }
@@ -509,6 +519,8 @@ impl Settings {
             meeting_autosave: self.meeting_autosave,
             meeting_date_format: self.meeting_date_format.clone(),
             meeting_name: self.meeting_name.clone(),
+            echo_cancel: self.echo_cancel,
+            meeting_audio_dump: self.meeting_audio_dump,
             auto_paste: self.auto_paste,
             theme: self.theme.clone(),
             pill_style: self.pill_style.clone(),
@@ -549,13 +561,26 @@ fn settings_path(app: &AppHandle) -> Result<PathBuf> {
     Ok(dir.join("settings.json"))
 }
 
+/// Copy a settings file that failed to parse to `settings.invalid.json`, so the
+/// next save does not destroy what the user wrote.
+fn keep_invalid(app: &AppHandle) {
+    let Ok(path) = settings_path(app) else { return };
+    if let Err(e) = std::fs::copy(&path, path.with_file_name("settings.invalid.json")) {
+        eprintln!("[whisperaround] keeping the invalid settings file: {e}");
+    }
+}
+
 /// Load settings, falling back to defaults if the file is missing or invalid.
 ///
 /// A key found in the file (written by versions before the credential store)
 /// is moved into the store and removed from the file.
 pub fn load(app: &AppHandle) -> Settings {
     let mut settings: Settings = match settings_path(app).ok().and_then(|p| std::fs::read(p).ok()) {
-        Some(bytes) => serde_json::from_slice(&bytes).unwrap_or_default(),
+        Some(bytes) => serde_json::from_slice(&bytes).unwrap_or_else(|e| {
+            eprintln!("[whisperaround] settings.json is invalid, using defaults: {e}");
+            keep_invalid(app);
+            Settings::default()
+        }),
         None => Settings::default(),
     };
     settings.normalize();

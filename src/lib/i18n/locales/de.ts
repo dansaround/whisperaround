@@ -437,6 +437,17 @@ const dict: Dict = {
       title: "Automatisch speichern",
       sub: "Speichert das Transkript am Ende des Meetings als .md in diesem Ordner.",
     },
+    echo: {
+      title: "Echounterdrückung",
+      sub: "Entfernt den Ton der Lautsprecher aus deiner Mikrofonspur, damit das, was andere sagen, ohne Kopfhörer nicht doppelt als deine Aussage transkribiert wird. Gilt, wenn Mikrofon + Systemaudio aufgenommen werden.",
+    },
+    diagnostics: {
+      title: "Diagnose",
+      dump: {
+        title: "Meeting-Audio speichern",
+        sub: "Speichert das unbearbeitete Mikrofon, das Systemaudio und das verarbeitete Mikrofon als WAV-Dateien neben dem Transkript. Erfordert automatisches Speichern. Etwa 700 MB pro Stunde; nur zur Fehlersuche.",
+      },
+    },
     disclaimer: "Transkripte werden automatisch gespeichert. Jedes Meeting wird nach dem Ende im Verlauf gespeichert und, wenn 'Automatisch speichern' aktiviert ist, zusätzlich als .md im Ordner oben. Ein neues Meeting zu starten löscht keine früheren Transkripte; dieser Bereich zeigt nur das letzte an.",
     fileName: {
       title: "Dateiname",

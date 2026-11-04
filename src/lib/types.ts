@@ -76,6 +76,10 @@ export interface SettingsView {
   meetingDateFormat: MeetingDateFormat;
   /** Name in the meeting file names; empty = the translated 'Meeting'. */
   meetingName: string;
+  /** Keep the speakers' sound out of the microphone track of a meeting. */
+  echoCancel: boolean;
+  /** Save the raw and processed meeting audio as WAV next to the transcript. */
+  meetingAudioDump: boolean;
   autoPaste: boolean;
   theme: Theme;
   pillStyle: PillStyle;

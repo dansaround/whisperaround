@@ -437,6 +437,17 @@ const dict: Dict = {
       title: "Guardar automáticamente",
       sub: "Guarda la transcripción como .md en esta carpeta al terminar la reunión.",
     },
+    echo: {
+      title: "Supresión de eco",
+      sub: "Quita el sonido de los parlantes de tu pista de micrófono, para que lo que dicen los demás no se transcriba también como tuyo si no usas audífonos. Se aplica al grabar micrófono + audio del sistema.",
+    },
+    diagnostics: {
+      title: "Diagnóstico",
+      dump: {
+        title: "Guardar el audio de la reunión",
+        sub: "Guarda como archivos WAV, junto a la transcripción, el micrófono sin procesar, el audio del sistema y el micrófono procesado. Requiere guardar automáticamente. Unos 700 MB por hora; solo para resolver problemas.",
+      },
+    },
     disclaimer: "Las transcripciones se guardan automáticamente. Cada reunión se guarda al terminar en el historial y, con 'Guardar automáticamente' activado, también como .md en la carpeta de arriba. Iniciar una nueva reunión no borra las anteriores: aquí solo se muestra la última.",
     fileName: {
       title: "Nombre del archivo",

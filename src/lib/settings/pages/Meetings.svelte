@@ -197,6 +197,15 @@
     {/if}
     <div class="row">
       <div class="row-text">
+        <strong>{t("meetings.echo.title")}</strong>
+        <small>{t("meetings.echo.sub")}</small>
+      </div>
+      <div class="control">
+        <Toggle label={t("meetings.echo.title")} checked={v.echoCancel} onchange={(c) => store.patch({ echoCancel: c })} />
+      </div>
+    </div>
+    <div class="row">
+      <div class="row-text">
         <strong>{t("meetings.folder.title")}</strong>
         <small class="path" title={folder}>{folder}</small>
       </div>
@@ -254,6 +263,21 @@
         <small class="warn-text" role="alert">{t("meetings.fileName.forbidden", { chars: rejected.join(" ") })}</small>
       {/if}
       <small class="example">{t("meetings.fileName.example", { file: example })}</small>
+    </div>
+  </section>
+
+  <section class="section">
+    <h3 class="section-title">{t("meetings.diagnostics.title")}</h3>
+    <div class="card">
+      <div class="row" class:disabled={!v.meetingAutosave}>
+        <div class="row-text">
+          <strong>{t("meetings.diagnostics.dump.title")}</strong>
+          <small>{t("meetings.diagnostics.dump.sub")}</small>
+        </div>
+        <div class="control">
+          <Toggle label={t("meetings.diagnostics.dump.title")} checked={v.meetingAudioDump} onchange={(c) => store.patch({ meetingAudioDump: c })} />
+        </div>
+      </div>
     </div>
   </section>
 

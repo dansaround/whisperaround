@@ -441,6 +441,17 @@ const dict: Dict = {
       title: "Salva automaticamente",
       sub: "Salva la trascrizione come .md in questa cartella al termine della riunione.",
     },
+    echo: {
+      title: "Soppressione dell’eco",
+      sub: "Rimuove il suono degli altoparlanti dalla traccia del microfono, così ciò che dicono gli altri non viene trascritto anche come tuo quando non usi le cuffie. Si applica quando registri microfono + audio di sistema.",
+    },
+    diagnostics: {
+      title: "Diagnostica",
+      dump: {
+        title: "Salva l’audio della riunione",
+        sub: "Salva il microfono grezzo, l’audio di sistema e il microfono elaborato come file WAV accanto alla trascrizione. Richiede il salvataggio automatico. Circa 700 MB all’ora; solo per la risoluzione dei problemi.",
+      },
+    },
     disclaimer: "Le trascrizioni vengono salvate automaticamente. Ogni riunione viene salvata nella cronologia al termine e, con 'Salva automaticamente' attivo, anche come .md nella cartella sopra. Avviare una nuova riunione non cancella le trascrizioni precedenti: qui si mostra solo l’ultima.",
     fileName: {
       title: "Nome del file",
