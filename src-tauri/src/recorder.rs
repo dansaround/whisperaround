@@ -170,6 +170,8 @@ struct TrackBuf {
     rate: u32,
     /// When capture began; the wall clock that gaps are measured against.
     start: Instant,
+    /// Frames at [`SAMPLE_RATE`] already drained.
+    drained: u64,
     /// Resampled mono samples at [`SAMPLE_RATE`] not drained yet.
     done: Vec<f32>,
     /// Mono samples at `rate` not resampled yet.
@@ -184,14 +186,16 @@ impl TrackBuf {
             kind,
             rate,
             start: Instant::now(),
+            drained: 0,
             done: Vec::new(),
             pending: Vec::new(),
         }
     }
 
-    /// Frames at [`SAMPLE_RATE`] produced so far, pending ones included.
+    /// Frames at [`SAMPLE_RATE`] produced since the start, drained and
+    /// pending ones included.
     fn produced(&self) -> u64 {
-        self.done.len() as u64 + out_len(self.pending.len(), self.rate)
+        self.drained + self.done.len() as u64 + out_len(self.pending.len(), self.rate)
     }
 
     /// Resample everything pending into `done`.
@@ -224,6 +228,7 @@ impl TrackBuf {
     fn take(&mut self) -> Track {
         self.pad(0);
         self.flush();
+        self.drained += self.done.len() as u64;
         Track {
             kind: self.kind,
             samples: std::mem::take(&mut self.done),
@@ -654,6 +659,18 @@ mod tests {
         assert_eq!(first.samples.len(), 1_600);
         assert!(buf.done.is_empty() && buf.pending.is_empty());
         assert!(buf.take().samples.is_empty());
+    }
+
+    #[test]
+    fn draining_does_not_make_the_track_look_behind() {
+        // A meeting drains every second; audio after a drain must not be
+        // preceded by silence for the time already drained.
+        let mut buf = TrackBuf::new(TrackKind::System, SAMPLE_RATE);
+        buf.start = Instant::now() - Duration::from_secs(1);
+        buf.append(&[0.5; 16_000]);
+        assert_eq!(buf.take().samples.len(), 16_000);
+        buf.append(&[0.5; 160]);
+        assert_eq!(buf.take().samples, vec![0.5; 160]);
     }
 
     #[test]
