@@ -754,10 +754,11 @@ mod tests {
         assert_eq!(chunks.iter().map(|c| c.samples.len()).sum::<usize>(), 75 * SR);
     }
 
-    /// Both tracks of a mix, `n` samples of `level` each, in stream `generation`.
+    /// Both tracks of a mix, `n` samples each: the microphone at `level`, the
+    /// system silent (so there is no echo), in stream `generation`.
     fn mix(n: usize, level: f32, generation: u64) -> Vec<Track> {
-        [TrackKind::Mic, TrackKind::System]
-            .map(|kind| Track { kind, samples: vec![level; n], generation })
+        [(TrackKind::Mic, level), (TrackKind::System, 0.0)]
+            .map(|(kind, level)| Track { kind, samples: vec![level; n], generation })
             .into()
     }
 
@@ -780,7 +781,7 @@ mod tests {
         assert_eq!(pending[0].len(), total);
         assert_eq!(pending[0].speaker, Some(TrackKind::Mic));
         assert_eq!(pending[1].speaker, Some(TrackKind::System));
-        // Nothing couples the tracks, so the microphone is unchanged.
+        // Nothing plays on the system, so the microphone is unchanged.
         let chunks: Vec<Chunk> = rx.try_iter().collect();
         assert_eq!(chunks.len(), 2);
         assert!(chunks.iter().all(|c| c.start_ms == 0 && c.samples.len() == total));
