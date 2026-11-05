@@ -72,6 +72,8 @@ let previewSettings: SettingsView = {
   meetingAutosave: true,
   meetingDateFormat: "ymd",
   meetingName: "",
+  echoCancel: true,
+  meetingAudioDump: false,
   autoPaste: true,
   theme: "auto",
   pillStyle: "mini",

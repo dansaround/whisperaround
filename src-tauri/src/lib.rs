@@ -2,6 +2,7 @@
 
 mod commands;
 mod downloads;
+mod echo;
 mod history;
 mod i18n;
 mod inject;

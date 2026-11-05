@@ -12,8 +12,13 @@
 //! Loopback delivers no callbacks while nothing is playing, so each track pads
 //! itself with silence by wall clock to stay aligned with real time (and with
 //! the other track of a mix).
+//!
+//! The default devices can change mid-recording (headphones plugged in), and a
+//! device that goes away stops its stream without a word. The capture thread
+//! watches for both and reopens the stream into the same track, so the track
+//! keeps its timeline and the gap is padded like any other silence.
 
-use std::sync::atomic::{AtomicU32, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::mpsc::{self, RecvTimeoutError, Sender};
 use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
@@ -66,6 +71,9 @@ pub enum TrackKind {
 pub struct Track {
     pub kind: TrackKind,
     pub samples: Vec<f32>,
+    /// Counts the times the track's stream was reopened on another device, so
+    /// a listener can tell that what it learned about the signal path is stale.
+    pub generation: u64,
 }
 
 /// The captured audio, one [`Track`] per source.
@@ -125,12 +133,17 @@ fn missing_frames(elapsed: Duration, rate: u32, have: u64) -> u64 {
     }
 }
 
+/// Frames at [`SAMPLE_RATE`] that `len` frames at `rate` become.
+fn out_len(len: usize, rate: u32) -> u64 {
+    (len as f64 * SAMPLE_RATE as f64 / rate as f64).round() as u64
+}
+
 /// Linear-interpolation resampling of `input` from `rate` to [`SAMPLE_RATE`].
 fn resample(input: &[f32], rate: u32) -> Vec<f32> {
     if rate == SAMPLE_RATE || input.is_empty() {
         return input.to_vec();
     }
-    let n_out = (input.len() as f64 * SAMPLE_RATE as f64 / rate as f64).round() as usize;
+    let n_out = out_len(input.len(), rate) as usize;
     let step = rate as f64 / SAMPLE_RATE as f64;
     let last = input.len() - 1;
     (0..n_out)
@@ -152,17 +165,22 @@ fn downmix<T: Copy>(data: &[T], channels: usize, convert: fn(T) -> f32) -> Vec<f
 }
 
 /// One track's capture buffer, shared between its stream callback and the
-/// [`Recorder`] handle.
+/// [`Recorder`] handle. Its stream can be swapped for another device while
+/// recording, so audio is kept at [`SAMPLE_RATE`] and the rate may change.
 struct TrackBuf {
     kind: TrackKind,
-    /// Native sample rate of the device.
+    /// Native sample rate of the device feeding `pending` right now.
     rate: u32,
     /// When capture began; the wall clock that gaps are measured against.
     start: Instant,
-    /// Frames appended since the start, drained ones included.
-    frames: u64,
-    /// Mono samples at `rate` not drained yet.
-    samples: Vec<f32>,
+    /// Frames at [`SAMPLE_RATE`] already drained.
+    drained: u64,
+    /// Resampled mono samples at [`SAMPLE_RATE`] not drained yet.
+    done: Vec<f32>,
+    /// Mono samples at `rate` not resampled yet.
+    pending: Vec<f32>,
+    /// Streams opened on this track so far.
+    generation: u64,
 }
 
 type SharedTrack = Arc<Mutex<TrackBuf>>;
@@ -173,33 +191,56 @@ impl TrackBuf {
             kind,
             rate,
             start: Instant::now(),
-            frames: 0,
-            samples: Vec::new(),
+            drained: 0,
+            done: Vec::new(),
+            pending: Vec::new(),
+            generation: 0,
         }
     }
 
-    /// Pad zeros so that the frames so far plus `pending` match the wall clock.
-    fn pad(&mut self, pending: usize) {
-        let missing = missing_frames(self.start.elapsed(), self.rate, self.frames + pending as u64);
+    /// Frames at [`SAMPLE_RATE`] produced since the start, drained and
+    /// pending ones included.
+    fn produced(&self) -> u64 {
+        self.drained + self.done.len() as u64 + out_len(self.pending.len(), self.rate)
+    }
+
+    /// Resample everything pending into `done`.
+    fn flush(&mut self) {
+        let raw = std::mem::take(&mut self.pending);
+        self.done.extend(resample(&raw, self.rate));
+    }
+
+    /// Pad zeros so that the frames so far plus `incoming` match the wall clock.
+    fn pad(&mut self, incoming: u64) {
+        let missing = missing_frames(self.start.elapsed(), SAMPLE_RATE, self.produced() + incoming);
         if missing > 0 {
-            self.samples.resize(self.samples.len() + missing as usize, 0.0);
-            self.frames += missing;
+            self.flush();
+            self.done.resize(self.done.len() + missing as usize, 0.0);
         }
     }
 
     fn append(&mut self, chunk: &[f32]) {
-        self.pad(chunk.len());
-        self.samples.extend_from_slice(chunk);
-        self.frames += chunk.len() as u64;
+        self.pad(out_len(chunk.len(), self.rate));
+        self.pending.extend_from_slice(chunk);
     }
 
-    /// Take everything not drained yet, resampled to [`SAMPLE_RATE`].
+    /// Continue with a new stream, on a device running at `rate`. Audio so far
+    /// keeps its old rate.
+    fn set_rate(&mut self, rate: u32) {
+        self.flush();
+        self.rate = rate;
+        self.generation += 1;
+    }
+
+    /// Take everything not drained yet, at [`SAMPLE_RATE`].
     fn take(&mut self) -> Track {
         self.pad(0);
-        let raw = std::mem::take(&mut self.samples);
+        self.flush();
+        self.drained += self.done.len() as u64;
         Track {
             kind: self.kind,
-            samples: resample(&raw, self.rate),
+            samples: std::mem::take(&mut self.done),
+            generation: self.generation,
         }
     }
 }
@@ -241,39 +282,56 @@ fn normalize_level(rms: f32) -> f32 {
     ((20.0 * rms.log10() + 52.0) / 30.0).clamp(0.0, 1.0)
 }
 
-/// Build an input stream of sample type `T` that feeds `track`.
+/// Build an input stream of sample type `T` that feeds `track`. An error from
+/// the stream (typically its device went away) sets `failed` for the watcher.
 fn build_stream<T: cpal::SizedSample + 'static>(
     device: &cpal::Device,
     config: &cpal::StreamConfig,
     convert: fn(T) -> f32,
     track: SharedTrack,
     level: Arc<AtomicU32>,
+    failed: Arc<AtomicBool>,
 ) -> Result<cpal::Stream, cpal::BuildStreamError> {
     let channels = config.channels as usize;
     device.build_input_stream(
         config,
         move |data: &[T], _: &_| push_chunk(&track, &level, &downmix(data, channels, convert)),
-        |e| eprintln!("[whisperaround] cpal stream error: {e}"),
+        move |e| {
+            eprintln!("[whisperaround] cpal stream error: {e}");
+            failed.store(true, Ordering::Relaxed);
+        },
         None,
     )
 }
 
-/// Start capturing `device` with `config` into a new track of `kind`.
-fn open_stream(
+/// Start capturing `device` into `track`: the input of a microphone, or the
+/// loopback of an output device for system audio (cpal turns an input stream
+/// on a render device into a WASAPI loopback capture). The track takes the
+/// device's sample rate, so it may be a different one than before.
+fn start_stream(
     kind: TrackKind,
     device: &cpal::Device,
-    config: cpal::SupportedStreamConfig,
+    track: &SharedTrack,
     level: &Arc<AtomicU32>,
-) -> Result<(cpal::Stream, SharedTrack)> {
+    failed: &Arc<AtomicBool>,
+) -> Result<cpal::Stream> {
+    let config = match kind {
+        TrackKind::Mic => device
+            .default_input_config()
+            .map_err(|e| anyhow!(tf("error.mic.config", &[("error", &e)])))?,
+        TrackKind::System => device
+            .default_output_config()
+            .map_err(|e| anyhow!(tf("error.systemAudio.config", &[("error", &e)])))?,
+    };
     let format = config.sample_format();
     let stream_config: cpal::StreamConfig = config.into();
-    let track = Arc::new(Mutex::new(TrackBuf::new(kind, stream_config.sample_rate.0)));
-    let (tr, lv) = (track.clone(), level.clone());
+    track.lock().unwrap().set_rate(stream_config.sample_rate.0);
+    let (tr, lv, fl) = (track.clone(), level.clone(), failed.clone());
 
     let stream = match format {
-        cpal::SampleFormat::F32 => build_stream::<f32>(device, &stream_config, |s| s, tr, lv),
+        cpal::SampleFormat::F32 => build_stream::<f32>(device, &stream_config, |s| s, tr, lv, fl),
         cpal::SampleFormat::I16 => {
-            build_stream::<i16>(device, &stream_config, |s| s as f32 / i16::MAX as f32, tr, lv)
+            build_stream::<i16>(device, &stream_config, |s| s as f32 / i16::MAX as f32, tr, lv, fl)
         }
         cpal::SampleFormat::U16 => build_stream::<u16>(
             device,
@@ -281,71 +339,131 @@ fn open_stream(
             |s| (s as f32 / u16::MAX as f32) * 2.0 - 1.0,
             tr,
             lv,
+            fl,
         ),
         other => return Err(anyhow!(tf("error.mic.sampleFormat", &[("format", &format!("{other:?}"))]))),
     }
     .map_err(|e| anyhow!(tf("error.mic.buildStream", &[("error", &e)])))?;
 
     stream.play().map_err(|e| anyhow!(tf("error.mic.startStream", &[("error", &e)])))?;
-    // Measure gaps from when audio can actually flow, not from device setup.
-    track.lock().unwrap().start = Instant::now();
-    Ok((stream, track))
+    Ok(stream)
 }
 
-/// Open the microphone named `name` (the system default when empty or no
-/// longer connected).
-fn open_mic(name: &str, level: &Arc<AtomicU32>) -> Result<(cpal::Stream, SharedTrack)> {
+/// The microphone named `name`, or the default input when it is empty or no
+/// longer connected.
+fn find_input(name: &str) -> Option<cpal::Device> {
     let host = cpal::default_host();
-    let named = (!name.is_empty())
+    (!name.is_empty())
         .then(|| host.input_devices().ok())
         .flatten()
-        .and_then(|mut it| it.find(|d| d.name().ok().as_deref() == Some(name)));
-    let device = named
+        .and_then(|mut it| it.find(|d| d.name().ok().as_deref() == Some(name)))
         .or_else(|| host.default_input_device())
-        .ok_or_else(|| anyhow!(t("error.mic.noDevice")))?;
-    let config = device
-        .default_input_config()
-        .map_err(|e| anyhow!(tf("error.mic.config", &[("error", &e)])))?;
-    open_stream(TrackKind::Mic, &device, config, level)
 }
 
-/// Open the loopback of the default output device: cpal turns an input
-/// stream on a render device into a WASAPI loopback capture.
-#[cfg(windows)]
-fn open_system(level: &Arc<AtomicU32>) -> Result<(cpal::Stream, SharedTrack)> {
-    let device = cpal::default_host()
-        .default_output_device()
-        .ok_or_else(|| anyhow!(t("error.systemAudio.noDevice")))?;
-    let config = device
-        .default_output_config()
-        .map_err(|e| anyhow!(tf("error.systemAudio.config", &[("error", &e)])))?;
-    open_stream(TrackKind::System, &device, config, level)
+/// Picks the device a [`Slot`] should capture from, as it is right now.
+type Target = Box<dyn Fn() -> Option<cpal::Device>>;
+
+/// How often the capture thread checks that each stream still runs on the
+/// device it should: plugging in headphones changes the defaults, and WASAPI
+/// keeps capturing the old device until it is told otherwise.
+const WATCH_INTERVAL: Duration = Duration::from_millis(500);
+
+/// A track and the stream feeding it. The stream is reopened in place when
+/// its device changes or it fails, so the track keeps going.
+struct Slot {
+    kind: TrackKind,
+    track: SharedTrack,
+    level: Arc<AtomicU32>,
+    target: Target,
+    /// Name of the device `stream` runs on; empty when there is none.
+    device: String,
+    stream: Option<cpal::Stream>,
+    /// Set by the stream's error callback.
+    failed: Arc<AtomicBool>,
 }
 
-#[cfg(not(windows))]
-fn open_system(_: &Arc<AtomicU32>) -> Result<(cpal::Stream, SharedTrack)> {
-    Err(anyhow!(t("error.systemAudio.unsupported")))
+impl Slot {
+    /// Start the stream on `device`, replacing any stream already running.
+    fn open(&mut self, device: &cpal::Device, name: String) -> Result<()> {
+        // Stop the old stream first, so the two never feed the track at once.
+        self.stream = None;
+        let failed = Arc::new(AtomicBool::new(false));
+        self.stream = Some(start_stream(self.kind, device, &self.track, &self.level, &failed)?);
+        self.device = name;
+        self.failed = failed;
+        Ok(())
+    }
+
+    /// Reopen the stream if it failed or its device is no longer the one that
+    /// should be used. A failed attempt is retried on the next check.
+    fn refresh(&mut self) {
+        let Some(device) = (self.target)() else {
+            // Nothing to capture from right now; resume once there is.
+            self.stream = None;
+            self.device.clear();
+            return;
+        };
+        let name = device.name().unwrap_or_else(|_| self.device.clone());
+        let healthy = self.stream.is_some() && !self.failed.load(Ordering::Relaxed);
+        if healthy && name == self.device {
+            return;
+        }
+        if let Err(e) = self.open(&device, name) {
+            eprintln!("[whisperaround] reopening the {:?} track: {e}", self.kind);
+        }
+    }
+}
+
+/// Open the first stream for `kind`, on the device `target` picks now.
+fn open_slot(kind: TrackKind, target: Target, level: &Arc<AtomicU32>) -> Result<Slot> {
+    let mut slot = Slot {
+        kind,
+        track: Arc::new(Mutex::new(TrackBuf::new(kind, SAMPLE_RATE))),
+        level: level.clone(),
+        target,
+        device: String::new(),
+        stream: None,
+        failed: Arc::new(AtomicBool::new(false)),
+    };
+    let device = (slot.target)().ok_or_else(|| {
+        anyhow!(match kind {
+            TrackKind::Mic => t("error.mic.noDevice"),
+            TrackKind::System => t("error.systemAudio.noDevice"),
+        })
+    })?;
+    let name = device.name().unwrap_or_default();
+    slot.open(&device, name)?;
+    // Measure gaps from when audio can actually flow, not from device setup.
+    slot.track.lock().unwrap().start = Instant::now();
+    Ok(slot)
 }
 
 /// Open every stream `source` needs, one track each (microphone first).
-fn open_streams(source: &Source, level: &Arc<AtomicU32>) -> Result<(Vec<cpal::Stream>, Vec<SharedTrack>)> {
+fn open_streams(source: &Source, level: &Arc<AtomicU32>) -> Result<Vec<Slot>> {
     // Fail before opening the microphone of a mix we can't complete.
     if !cfg!(windows) && !matches!(source, Source::Mic(_)) {
         return Err(anyhow!(t("error.systemAudio.unsupported")));
     }
-    let system = || open_system(level).map_err(|e| anyhow!(tf("error.systemAudio.open", &[("error", &e)])));
-    let opened = match source {
-        Source::Mic(name) => vec![open_mic(name, level)?],
-        Source::System => vec![system()?],
-        Source::Mix(name) => vec![open_mic(name, level)?, system()?],
+    let mic = |name: &str| -> Target {
+        let name = name.to_string();
+        Box::new(move || find_input(&name))
     };
-    Ok(opened.into_iter().unzip())
+    let system = || {
+        open_slot(TrackKind::System, Box::new(|| cpal::default_host().default_output_device()), level)
+            .map_err(|e| anyhow!(tf("error.systemAudio.open", &[("error", &e)])))
+    };
+    Ok(match source {
+        Source::Mic(name) => vec![open_slot(TrackKind::Mic, mic(name), level)?],
+        Source::System => vec![system()?],
+        Source::Mix(name) => vec![open_slot(TrackKind::Mic, mic(name), level)?, system()?],
+    })
 }
 
 impl Recorder {
     /// Open the source described by the `input_device` setting (see
     /// [`Source::parse`]) and start capturing. Returns once the streams are
-    /// actually running (or with an error if any could not start).
+    /// actually running (or with an error if any could not start). Until
+    /// [`Recorder::stop`], each stream follows its device (see `Slot`).
     /// `on_level` is called every [`LEVEL_INTERVAL`] with the normalized input
     /// level from the capture thread.
     pub fn start(source: &str, on_level: impl Fn(f32) + Send + 'static) -> Result<Recorder> {
@@ -357,10 +475,10 @@ impl Recorder {
         let handle = thread::spawn(move || -> Result<()> {
             // Open the streams; report any setup error back to `start()`.
             let level = Arc::new(AtomicU32::new(0));
-            let streams = match open_streams(&thread_source, &level) {
-                Ok((streams, tracks)) => {
-                    let _ = ready_tx.send(Ok(tracks));
-                    streams
+            let mut slots = match open_streams(&thread_source, &level) {
+                Ok(slots) => {
+                    let _ = ready_tx.send(Ok(slots.iter().map(|s| s.track.clone()).collect()));
+                    slots
                 }
                 Err(e) => {
                     let _ = ready_tx.send(Err(anyhow!("{e}")));
@@ -368,17 +486,23 @@ impl Recorder {
                 }
             };
 
-            // Capture until stop is signalled, reporting the level meanwhile.
+            // Capture until stop is signalled, reporting the level meanwhile
+            // and reopening any stream whose device changed or failed.
+            let mut checked = Instant::now();
             loop {
                 match stop_rx.recv_timeout(LEVEL_INTERVAL) {
                     Err(RecvTimeoutError::Timeout) => {
                         let rms = f32::from_bits(level.swap(0, Ordering::Relaxed));
                         on_level(normalize_level(rms));
+                        if checked.elapsed() >= WATCH_INTERVAL {
+                            checked = Instant::now();
+                            slots.iter_mut().for_each(Slot::refresh);
+                        }
                     }
                     _ => break,
                 }
             }
-            drop(streams); // stops the streams and flushes callbacks
+            drop(slots); // stops the streams and flushes callbacks
             Ok(())
         });
 
@@ -473,6 +597,7 @@ mod tests {
         Track {
             kind,
             samples: samples.to_vec(),
+            generation: 0,
         }
     }
 
@@ -499,7 +624,7 @@ mod tests {
         let level = AtomicU32::new(0);
         push_chunk(&buf, &level, &[0.5, -0.5]);
         push_chunk(&buf, &level, &[0.1, -0.1]);
-        assert_eq!(buf.lock().unwrap().samples.len(), 4);
+        assert_eq!(buf.lock().unwrap().pending.len(), 4);
         assert_eq!(f32::from_bits(level.load(Ordering::Relaxed)), 0.5);
     }
 
@@ -528,10 +653,11 @@ mod tests {
         let mut buf = TrackBuf::new(TrackKind::System, 1_000);
         buf.start = Instant::now() - Duration::from_secs(1);
         buf.append(&[0.5; 100]);
-        // ~900 frames of silence, then the chunk itself.
-        assert!((buf.samples.len() as i64 - 1_000).abs() < 20);
-        assert_eq!(&buf.samples[buf.samples.len() - 100..], &[0.5; 100]);
-        assert_eq!(buf.samples[0], 0.0);
+        let out = buf.take().samples;
+        // A second at SAMPLE_RATE: silence first, then the chunk (1 kHz → 16 kHz).
+        assert!((out.len() as i64 - 16_000).abs() < 20);
+        assert_eq!(out[0], 0.0);
+        assert!(out[out.len() - 1_600..].iter().all(|&s| s == 0.5));
     }
 
     #[test]
@@ -541,8 +667,30 @@ mod tests {
         let first = buf.take();
         assert_eq!(first.kind, TrackKind::Mic);
         assert_eq!(first.samples.len(), 1_600);
-        assert!(buf.samples.is_empty());
+        assert!(buf.done.is_empty() && buf.pending.is_empty());
         assert!(buf.take().samples.is_empty());
+    }
+
+    #[test]
+    fn draining_does_not_make_the_track_look_behind() {
+        // A meeting drains every second; audio after a drain must not be
+        // preceded by silence for the time already drained.
+        let mut buf = TrackBuf::new(TrackKind::System, SAMPLE_RATE);
+        buf.start = Instant::now() - Duration::from_secs(1);
+        buf.append(&[0.5; 16_000]);
+        assert_eq!(buf.take().samples.len(), 16_000);
+        buf.append(&[0.5; 160]);
+        assert_eq!(buf.take().samples, vec![0.5; 160]);
+    }
+
+    #[test]
+    fn set_rate_keeps_each_second_its_length() {
+        // A device switch from 1 kHz to 2 kHz mid-recording.
+        let mut buf = TrackBuf::new(TrackKind::System, 1_000);
+        buf.append(&[0.5; 1_000]);
+        buf.set_rate(2_000);
+        buf.append(&[0.5; 2_000]);
+        assert_eq!(buf.take().samples.len(), 32_000);
     }
 
     #[test]

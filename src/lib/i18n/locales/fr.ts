@@ -441,6 +441,17 @@ const dict: Dict = {
       title: "Enregistrer automatiquement",
       sub: "Enregistre la transcription en .md dans ce dossier à la fin de la réunion.",
     },
+    echo: {
+      title: "Suppression de l’écho",
+      sub: "Retire le son des haut-parleurs de ta piste de microphone, pour que ce que disent les autres ne soit pas aussi transcrit comme venant de toi quand tu n’utilises pas de casque. S’applique à l’enregistrement du microphone + de l’audio système.",
+    },
+    diagnostics: {
+      title: "Diagnostic",
+      dump: {
+        title: "Enregistrer l’audio de la réunion",
+        sub: "Enregistre le microphone brut, l’audio système et le microphone traité en fichiers WAV à côté de la transcription. Nécessite l’enregistrement automatique. Environ 700 Mo par heure ; uniquement pour le dépannage.",
+      },
+    },
     disclaimer: "Les transcriptions sont enregistrées automatiquement. Chaque réunion est ajoutée à l’historique à la fin et, si « Enregistrer automatiquement » est activé, aussi en .md dans le dossier ci-dessus. Démarrer une nouvelle réunion n’efface pas les précédentes : cette section n’affiche que la dernière.",
     fileName: {
       title: "Nom du fichier",

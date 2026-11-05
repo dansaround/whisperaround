@@ -46,6 +46,17 @@ export default {
     title: "Save automatically",
     sub: "Save the transcript as .md in this folder when the meeting ends.",
   },
+  echo: {
+    title: "Echo suppression",
+    sub: "Removes the speakers' sound from your microphone track, so what others say isn't transcribed twice as yours when you don't use headphones. Applies when recording microphone + system audio.",
+  },
+  diagnostics: {
+    title: "Diagnostics",
+    dump: {
+      title: "Save meeting audio",
+      sub: "Saves the raw microphone, the system audio and the processed microphone as WAV files next to the transcript. Requires saving automatically. About 700 MB per hour; for troubleshooting only.",
+    },
+  },
   disclaimer: "Transcripts are saved automatically. Each meeting is saved to your history when it ends and, with “Save automatically” on, as .md in the folder above. Starting a new meeting doesn’t delete earlier transcripts; this section only shows the latest one.",
   fileName: {
     title: "File name",

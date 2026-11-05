@@ -1,6 +1,6 @@
 [package]
 name = "whisperaround"
-version = "0.1.11"
+version = "0.1.12"
 description = "Superwhisper but open sourced — instant voice dictation via OpenAI Whisper."
 authors = ["WhisperAround"]
 edition = "2021"
@@ -42,6 +42,8 @@ tauri-plugin-updater = { version = "2.9", default-features = false, features = [
 tauri-plugin-dialog = "2"
 # Local date and time in the meeting file names.
 chrono = { version = "0.4", default-features = false, features = ["clock"] }
+# FFT for the echo suppression of meetings (pure Rust).
+realfft = "3"
 
 [target.'cfg(windows)'.dependencies]
 keyring = { version = "3", default-features = false, features = ["windows-native"] }
