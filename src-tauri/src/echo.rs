@@ -46,8 +46,8 @@ const TAIL_DECAY: f32 = 0.8;
 /// as often while there is no delay).
 const ESTIMATE_WINDOW: usize = 2 * SAMPLE_RATE as usize;
 const ESTIMATE_EVERY: usize = SAMPLE_RATE as usize;
-/// Shortest window worth estimating on.
-const ESTIMATE_MIN: usize = SAMPLE_RATE as usize;
+/// Shortest window worth estimating on (0.5 s).
+const ESTIMATE_MIN: usize = SAMPLE_RATE as usize / 2;
 /// The system audio must be at least this loud (mean square) for an estimate.
 const ESTIMATE_MIN_POWER: f32 = 1e-5;
 /// Peak of the correlation over its typical level that counts as an echo.
@@ -59,8 +59,9 @@ const JUMP: isize = SAMPLE_RATE as isize / 20;
 const JUMP_AGREE: isize = SAMPLE_RATE as isize / 40;
 /// Estimates right after a delay is found that are taken as they come instead
 /// of smoothed: the first one is often a few ms off, and halving the error once
-/// a second would leave the gate misaligned for several seconds.
-const FRESH_ESTIMATES: u32 = 2;
+/// a second would leave the gate misaligned for several seconds. Only one,
+/// since a stray estimate later on would drop a coupling that was right.
+const FRESH_ESTIMATES: u32 = 1;
 /// A fresh estimate this far from the current delay (2.5 ms) also drops the
 /// coupling learned with the old one.
 const SETTLE: isize = SAMPLE_RATE as isize / 400;
@@ -88,8 +89,8 @@ const POWER_SMOOTHING: f32 = 0.1;
 /// wrong value, which an estimate that learns only from quiet frames can.
 const HISTORY_FRAMES: usize = 150;
 const COUPLING_QUANTILE: f32 = 0.25;
-/// Ratios seen before the coupling is trusted (0.5 s).
-const MIN_HISTORY: usize = 25;
+/// Ratios seen before the coupling is trusted (0.3 s).
+const MIN_HISTORY: usize = 15;
 /// Largest microphone over system power of a band.
 const MAX_RATIO: f32 = 10.0;
 /// Samples a change of gate is faded over (5 ms).
