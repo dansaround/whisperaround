@@ -57,13 +57,21 @@ const MIN_CONFIDENCE: f32 = 8.0;
 const JUMP: isize = SAMPLE_RATE as isize / 20;
 /// Estimates this close are the same jump (25 ms).
 const JUMP_AGREE: isize = SAMPLE_RATE as isize / 40;
+/// Estimates right after a delay is found that are taken as they come instead
+/// of smoothed: the first one is often a few ms off, and halving the error once
+/// a second would leave the gate misaligned for several seconds.
+const FRESH_ESTIMATES: u32 = 2;
+/// A fresh estimate this far from the current delay (2.5 ms) also drops the
+/// coupling learned with the old one.
+const SETTLE: isize = SAMPLE_RATE as isize / 400;
 /// Frequencies the delay is estimated on.
 const ESTIMATE_HZ: (usize, usize) = (200, 3_800);
 
 /// The system audio (with its tail) is active above this mean square.
 const REF_ACTIVE: f32 = 5e-6;
-/// Predicted echo over system audio power below which there is no coupling.
-const MIN_COUPLING: f32 = 0.002;
+/// Predicted echo over system audio power below which there is no coupling
+/// (-33 dB; laptop speakers couple in at about -28 dB, headphones at -50 dB).
+const MIN_COUPLING: f32 = 0.0005;
 /// The microphone is silenced while it is at most this many times the
 /// predicted echo, or while at most [`UNEXPLAINED`] of it is not explained by
 /// the echo band by band (up to [`GATE_RATIO`] times the predicted power of
@@ -213,6 +221,8 @@ pub struct EchoCanceller {
     delay: Option<isize>,
     /// A jump of the delay waiting for a second estimate.
     jump: Option<isize>,
+    /// Estimates left that are taken without smoothing.
+    fresh: u32,
     next_estimate: usize,
     /// Where the echo path was last forgotten: the estimate looks no further back.
     forgotten: usize,
@@ -238,6 +248,7 @@ impl EchoCanceller {
             emitted: 0,
             delay: None,
             jump: None,
+            fresh: 0,
             next_estimate: ESTIMATE_MIN,
             forgotten: 0,
             coupling: Coupling::default(),
@@ -251,6 +262,7 @@ impl EchoCanceller {
     pub fn reset(&mut self) {
         self.delay = None;
         self.jump = None;
+        self.fresh = 0;
         self.forgotten = self.emitted;
         self.next_estimate = self.emitted + ESTIMATE_MIN;
         self.coupling = Coupling::default();
@@ -440,9 +452,19 @@ impl EchoCanceller {
     fn accept(&mut self, found: isize) {
         let Some(current) = self.delay else {
             self.delay = Some(found);
+            self.fresh = FRESH_ESTIMATES;
             return;
         };
-        if (found - current).abs() <= JUMP {
+        if self.fresh > 0 && (found - current).abs() <= JUMP {
+            // Still settling: what was learned with the old delay is off too.
+            self.fresh -= 1;
+            if (found - current).abs() > SETTLE {
+                self.delay = Some(found);
+                self.coupling = Coupling::default();
+                self.tail.clear();
+            }
+            self.jump = None;
+        } else if (found - current).abs() <= JUMP {
             self.delay = Some(current + (found - current) / 2);
             self.jump = None;
         } else if self.jump.is_some_and(|j| (j - found).abs() <= JUMP_AGREE) {
@@ -575,6 +597,17 @@ mod tests {
             let r = reduction(&mic, &out, 3);
             assert!(r >= 25.0, "{delay_ms} ms: only {r:.1} dB");
         }
+    }
+
+    #[test]
+    fn a_weakly_coupled_echo_is_removed() {
+        // Laptop speakers far from the microphone: about -30 dB of coupling.
+        let reference = speech(1, 10, 0.1);
+        let mut mic = echo_of(&reference, 80 * SR / 1000, 0.03);
+        add_noise(&mut mic, 5, 0.0005);
+        let out = run(&mic, &reference);
+        let r = reduction(&mic, &out, 3);
+        assert!(r >= 20.0, "only {r:.1} dB");
     }
 
     #[test]
