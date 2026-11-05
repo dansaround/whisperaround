@@ -17,6 +17,7 @@
 //! its source. [`EchoCanceller::flush`] releases the rest, so the output is as
 //! long as the input.
 
+use std::collections::VecDeque;
 use std::sync::Arc;
 
 use realfft::num_complex::Complex;
@@ -41,7 +42,8 @@ const TAIL_FRAMES: usize = 10;
 /// How much each earlier tail frame weighs less than the next one.
 const TAIL_DECAY: f32 = 0.8;
 
-/// Window of the delay estimate (2 s) and how often it is redone (1 s).
+/// Window of the delay estimate (2 s) and how often it is redone (1 s; twice
+/// as often while there is no delay).
 const ESTIMATE_WINDOW: usize = 2 * SAMPLE_RATE as usize;
 const ESTIMATE_EVERY: usize = SAMPLE_RATE as usize;
 /// Shortest window worth estimating on.
@@ -62,27 +64,26 @@ const ESTIMATE_HZ: (usize, usize) = (200, 3_800);
 const REF_ACTIVE: f32 = 5e-6;
 /// Predicted echo over system audio power below which there is no coupling.
 const MIN_COUPLING: f32 = 0.002;
-/// Correlation between the microphone and system levels needed to trust the
-/// coupling; near-end speech does not follow the system audio.
-const MIN_CORRELATION: f32 = 0.5;
-/// Levels seen before the correlation is trusted.
-const MIN_LEVELS: u32 = 50;
 /// The microphone is silenced while it is at most this many times the
-/// predicted echo.
+/// predicted echo, or while at most [`UNEXPLAINED`] of it is not explained by
+/// the echo band by band (up to [`GATE_RATIO`] times the predicted power of
+/// each); near-end speech does not have the spectrum of the system audio.
+const TOTAL_RATIO: f32 = 2.0;
 const GATE_RATIO: f32 = 4.0;
-/// The coupling learns from frames up to this many times the predicted echo.
-const LEARN_RATIO: f32 = 5.0;
-/// Frames the coupling learns from unconditionally, to get started.
-const WARM_FRAMES: u32 = 40;
+const UNEXPLAINED: f32 = 0.1;
 /// Smoothing of the band powers the coupling is the ratio of.
 const POWER_SMOOTHING: f32 = 0.1;
-/// Coupling estimates rise slowly and fall fast, so near-end speech cannot
-/// raise them for long (per frame; faster while warming up).
-const RISE: f32 = 0.02;
-const RISE_WARM: f32 = 0.1;
-const FALL: f32 = 0.04;
-/// Smoothing of the level statistics behind the correlation.
-const LEVEL_SMOOTHING: f32 = 0.02;
+/// The coupling is a low quantile of the microphone over system power seen in
+/// the last 3 s of frames with system audio. Echo alone gives the coupling
+/// itself and near-end speech only larger ratios, and speech has pauses, so the
+/// quantile follows a new path within a second or two and cannot lock on a
+/// wrong value, which an estimate that learns only from quiet frames can.
+const HISTORY_FRAMES: usize = 150;
+const COUPLING_QUANTILE: f32 = 0.25;
+/// Ratios seen before the coupling is trusted (0.5 s).
+const MIN_HISTORY: usize = 25;
+/// Largest microphone over system power of a band.
+const MAX_RATIO: f32 = 10.0;
 /// Samples a change of gate is faded over (5 ms).
 const RAMP: usize = SAMPLE_RATE as usize / 200;
 
@@ -146,49 +147,53 @@ impl Spectrum {
     }
 }
 
-/// Running statistics of two levels, to tell if they move together.
-#[derive(Default)]
-struct Levels {
-    count: u32,
-    mean_a: f32,
-    mean_b: f32,
-    mean_aa: f32,
-    mean_bb: f32,
-    mean_ab: f32,
-}
-
-impl Levels {
-    fn push(&mut self, a: f32, b: f32) {
-        let k = if self.count == 0 { 1.0 } else { LEVEL_SMOOTHING };
-        self.mean_a += k * (a - self.mean_a);
-        self.mean_b += k * (b - self.mean_b);
-        self.mean_aa += k * (a * a - self.mean_aa);
-        self.mean_bb += k * (b * b - self.mean_bb);
-        self.mean_ab += k * (a * b - self.mean_ab);
-        self.count += 1;
-    }
-
-    /// Pearson correlation of the two levels.
-    fn correlation(&self) -> f32 {
-        let var_a = self.mean_aa - self.mean_a * self.mean_a;
-        let var_b = self.mean_bb - self.mean_b * self.mean_b;
-        let cov = self.mean_ab - self.mean_a * self.mean_b;
-        cov / (var_a * var_b).max(1e-20).sqrt()
-    }
-}
-
 /// What the canceller has learned about the echo path. Dropped whenever the
 /// path may have changed.
 #[derive(Default)]
 struct Coupling {
-    /// Smoothed microphone and (tailed) system power while learning.
+    /// Smoothed microphone and (tailed) system power.
     mic: Bands,
     reference: Bands,
-    /// Microphone power over system power, per band.
-    ratio: Bands,
-    /// Frames learned from.
+    /// Smoothed frames seen, with system audio.
     frames: u32,
-    levels: Levels,
+    /// Microphone over system power per band, of the latest frames.
+    history: VecDeque<Bands>,
+}
+
+impl Coupling {
+    /// Take a frame with system audio in.
+    fn push(&mut self, mic: &Bands, reference: &Bands) {
+        let k = if self.frames == 0 { 1.0 } else { POWER_SMOOTHING };
+        let mut ratio = [0.0; BANDS];
+        for b in 0..BANDS {
+            self.mic[b] += k * (mic[b] - self.mic[b]);
+            self.reference[b] += k * (reference[b] - self.reference[b]);
+            ratio[b] = (self.mic[b] / self.reference[b].max(1e-10)).min(MAX_RATIO);
+        }
+        self.frames += 1;
+        if self.history.len() == HISTORY_FRAMES {
+            self.history.pop_front();
+        }
+        self.history.push_back(ratio);
+    }
+
+    /// Microphone over system power per band, if there is enough to tell.
+    fn ratio(&self) -> Option<Bands> {
+        if self.history.len() < MIN_HISTORY {
+            return None;
+        }
+        let nth = ((self.history.len() - 1) as f32 * COUPLING_QUANTILE) as usize;
+        let mut ratio = [0.0; BANDS];
+        let mut column = [0.0f32; HISTORY_FRAMES];
+        let column = &mut column[..self.history.len()];
+        for (b, r) in ratio.iter_mut().enumerate() {
+            for (c, frame) in column.iter_mut().zip(&self.history) {
+                *c = frame[b];
+            }
+            *r = *column.select_nth_unstable_by(nth, f32::total_cmp).1;
+        }
+        Some(ratio)
+    }
 }
 
 pub struct EchoCanceller {
@@ -209,6 +214,8 @@ pub struct EchoCanceller {
     /// A jump of the delay waiting for a second estimate.
     jump: Option<isize>,
     next_estimate: usize,
+    /// Where the echo path was last forgotten: the estimate looks no further back.
+    forgotten: usize,
     coupling: Coupling,
     /// Whether the previous decision silenced the microphone.
     gated: bool,
@@ -232,6 +239,7 @@ impl EchoCanceller {
             delay: None,
             jump: None,
             next_estimate: ESTIMATE_MIN,
+            forgotten: 0,
             coupling: Coupling::default(),
             gated: false,
             tail: Vec::new(),
@@ -243,6 +251,7 @@ impl EchoCanceller {
     pub fn reset(&mut self) {
         self.delay = None;
         self.jump = None;
+        self.forgotten = self.emitted;
         self.next_estimate = self.emitted + ESTIMATE_MIN;
         self.coupling = Coupling::default();
         self.tail.clear();
@@ -278,7 +287,9 @@ impl EchoCanceller {
             }
             if self.emitted >= self.next_estimate {
                 self.estimate();
-                self.next_estimate = self.emitted + ESTIMATE_EVERY;
+                // Until there is a delay, try again sooner.
+                let every = if self.delay.is_some() { ESTIMATE_EVERY } else { ESTIMATE_EVERY / 2 };
+                self.next_estimate = self.emitted + every;
             }
             let gate = self.decide(end as isize);
             let len = end.min(self.mic_end()) - self.emitted;
@@ -346,35 +357,21 @@ impl EchoCanceller {
         }
 
         let c = &mut self.coupling;
-        let predicted: f32 = c.ratio.iter().zip(&tail).map(|(h, t)| h * t).sum();
-        let warm = c.frames < WARM_FRAMES;
-        if warm || mic_power <= LEARN_RATIO * predicted {
-            let rise = if warm { RISE_WARM } else { RISE };
-            for b in 0..BANDS {
-                let k = if c.frames == 0 { 1.0 } else { POWER_SMOOTHING };
-                c.mic[b] += k * (mic_bands[b] - c.mic[b]);
-                c.reference[b] += k * (tail[b] - c.reference[b]);
-                if c.reference[b] > 1e-10 {
-                    let now = (c.mic[b] / c.reference[b]).min(10.0);
-                    let k = if now > c.ratio[b] { rise } else { FALL };
-                    c.ratio[b] += k * (now - c.ratio[b]);
-                }
-            }
-            c.frames += 1;
-        }
-        c.levels.push(mic_power.sqrt(), ref_power.sqrt());
+        c.push(&mic_bands, &tail);
+        let Some(ratio) = c.ratio() else {
+            return false;
+        };
 
-        let predicted: f32 = c.ratio.iter().zip(&tail).map(|(h, t)| h * t).sum();
-        c.levels.count >= MIN_LEVELS
-            && predicted >= MIN_COUPLING * ref_power
-            && c.levels.correlation() >= MIN_CORRELATION
-            && mic_power <= GATE_RATIO * predicted
+        let predicted: f32 = ratio.iter().zip(&tail).map(|(h, t)| h * t).sum();
+        // The part of the microphone that no band's predicted echo explains.
+        let unexplained: f32 = mic_bands.iter().zip(&ratio).zip(&tail).map(|((m, h), t)| (m - GATE_RATIO * h * t).max(0.0)).sum();
+        predicted >= MIN_COUPLING * ref_power && (mic_power <= TOTAL_RATIO * predicted || unexplained <= UNEXPLAINED * mic_power)
     }
 
     /// Look for the delay between the system audio and the microphone over the
     /// last couple of seconds (GCC-PHAT) and take it if it is convincing.
     fn estimate(&mut self) {
-        let len = self.emitted.min(ESTIMATE_WINDOW);
+        let len = (self.emitted - self.forgotten).min(ESTIMATE_WINDOW);
         if len < ESTIMATE_MIN {
             return;
         }
@@ -432,7 +429,8 @@ impl EchoCanceller {
             .map(|(_, c)| c * c)
             .collect();
         let noise = (rest.iter().sum::<f32>() / rest.len() as f32).sqrt();
-        if top <= 0.0 || top < MIN_CONFIDENCE * noise {
+        // A peak at either end is the slope of one outside the range.
+        if peak == 0 || peak == range.len() - 1 || top <= 0.0 || top < MIN_CONFIDENCE * noise {
             return;
         }
         self.accept(MAX_LAG as isize - peak as isize);
@@ -685,5 +683,32 @@ mod tests {
         }
         out.extend(ec.flush());
         assert_eq!(out.len(), mic.len());
+    }
+
+    #[test]
+    fn a_new_path_is_learned_even_with_near_end_speech_at_the_switch() {
+        // A Bluetooth speaker for 20 s, then laptop speakers after a reset,
+        // with the user talking over the first couple of seconds.
+        let secs = 32;
+        let reference = speech(1, secs, 0.1);
+        let mut mic = echo_of(&reference, 377 * SR / 1000, 0.3);
+        let late = echo_of(&reference, 68 * SR / 1000, 0.5);
+        mic[20 * SR..].copy_from_slice(&late[20 * SR..]);
+        let mut near = vec![0.0; secs * SR];
+        near[20 * SR..22 * SR].copy_from_slice(&speech(4, 2, 0.15));
+        let echo = mic.clone();
+        let mic = sum(&echo, &near);
+        let mut ec = EchoCanceller::new();
+        let mut out = Vec::new();
+        for (n, (m, s)) in mic.chunks(SR).zip(reference.chunks(SR)).enumerate() {
+            if n == 20 {
+                ec.reset();
+            }
+            out.extend(ec.process(m, s));
+        }
+        out.extend(ec.flush());
+        // From 3 s after the switch on there is only echo.
+        let r = reduction(&mic, &out, 23);
+        assert!(r >= 20.0, "only {r:.1} dB");
     }
 }
