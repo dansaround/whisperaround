@@ -348,6 +348,12 @@ const dict: Dict = {
       download: "GPUを選択するとNVIDIA CUDAライブラリ（~1.5 GB）が1回ダウンロードされます",
       ready: "CUDAライブラリがインストール済み",
     },
+    unload: {
+      title: "アイドル時にメモリを解放",
+      sub: "しばらく音声入力がないとローカルモデルを停止します。話している間に再読み込みされます（数秒）",
+      after: "{n}分後",
+      never: "しない",
+    },
     python: {
       checking: "Pythonを確認中…",
       notFound: "Python 3が見つかりません",

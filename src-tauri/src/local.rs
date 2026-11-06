@@ -8,12 +8,17 @@
 //! Downloaded MLX models (`crate::downloads`) run through the same worker with
 //! mlx-whisper, on the Apple Silicon GPU. The CUDA libraries are pip packages
 //! added to the same venv on demand; any GPU failure falls back to the CPU.
+//!
+//! The worker is not kept forever: it is stopped when the active model is not
+//! local, or after `local_unload_minutes` without a transcription, which frees
+//! its RAM and VRAM. Starting a recording loads it again while the user speaks.
 
 use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Mutex, OnceLock};
+use std::time::{Duration, Instant};
 
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
@@ -40,6 +45,8 @@ struct Worker {
     child: Child,
     stdin: ChildStdin,
     stdout: BufReader<ChildStdout>,
+    /// End of the last request, for the idle unload.
+    last_used: Instant,
 }
 
 #[derive(Deserialize)]
@@ -158,6 +165,60 @@ fn add_engine(app: &AppHandle, model: &str, req: &mut serde_json::Value) -> Resu
     Ok(())
 }
 
+/// Load `model` in the background as a recording starts, so a worker stopped
+/// for being idle is ready again by the time the user finishes speaking.
+/// Skipped while the venv or CUDA libraries still need installing (the
+/// transcription does that) and when the worker is already busy.
+pub fn prewarm(app: &AppHandle, model: &str) {
+    let Some(name) = model_name(model) else {
+        return;
+    };
+    if needs_setup(app) || needs_cuda_setup(app) || WORKER.try_lock().is_err() {
+        return;
+    }
+    let (app, name) = (app.clone(), name.to_string());
+    tauri::async_runtime::spawn_blocking(move || {
+        // A failure here shows up again, with its message, when transcribing.
+        let _ = warm(&app, &name);
+    });
+}
+
+/// Stop the worker and free its memory; the next request starts it again.
+/// Left alone while a meeting may still send it chunks.
+pub fn unload(app: &AppHandle) {
+    if crate::meeting::is_active(app) {
+        return;
+    }
+    *WORKER.lock().unwrap() = None;
+}
+
+/// Stop the worker once it has gone `local_unload_minutes` without a request.
+/// Never while recording, transcribing or in a meeting: a long dictation would
+/// otherwise lose the model it is about to use.
+pub fn start_idle_unloader(app: AppHandle) {
+    std::thread::spawn(move || loop {
+        std::thread::sleep(Duration::from_secs(15));
+        let minutes = app.state::<crate::state::AppState>().settings.lock().unwrap().local_unload_minutes;
+        if minutes == 0 || busy(&app) {
+            continue;
+        }
+        // Locked means a request is running: in use, not idle.
+        let Ok(mut guard) = WORKER.try_lock() else {
+            continue;
+        };
+        let limit = Duration::from_secs(u64::from(minutes) * 60);
+        if guard.as_ref().is_some_and(|w| w.last_used.elapsed() >= limit) {
+            *guard = None;
+        }
+    });
+}
+
+fn busy(app: &AppHandle) -> bool {
+    use crate::state::{AppState, AppStatus};
+    let status = *app.state::<AppState>().status.lock().unwrap();
+    matches!(status, AppStatus::Recording | AppStatus::Processing) || crate::meeting::is_active(app)
+}
+
 /// Transcribe a WAV buffer with the given faster-whisper model (blocking).
 pub fn transcribe(
     app: &AppHandle,
@@ -222,6 +283,7 @@ fn request(app: &AppHandle, req: serde_json::Value) -> Result<String> {
         Ok(serde_json::from_str(&line)?)
     })();
 
+    worker.last_used = Instant::now();
     match io {
         Ok(r) if r.ok => Ok(r.text),
         Ok(r) => Err(anyhow!(tf("error.local.failed", &[("error", &r.error)]))),
@@ -252,7 +314,7 @@ fn spawn_worker(app: &AppHandle) -> Result<Worker> {
         .map_err(|e| anyhow!(tf("error.local.start", &[("error", &e)])))?;
     let stdin = child.stdin.take().ok_or_else(|| anyhow!(t("error.local.noPipe")))?;
     let stdout = BufReader::new(child.stdout.take().ok_or_else(|| anyhow!(t("error.local.noPipe")))?);
-    Ok(Worker { child, stdin, stdout })
+    Ok(Worker { child, stdin, stdout, last_used: Instant::now() })
 }
 
 /// Let the dynamic loader find the pip-installed NVIDIA libraries. It reads

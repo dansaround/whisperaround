@@ -28,6 +28,14 @@
     !gpu ? "" : !gpu.name ? t("models.device.noGpu") : v.localDevice === "auto" ? t("models.device.autoSub") : !gpu.cudaReady ? t("models.device.download") : t("models.device.ready"),
   );
 
+  // Select values are strings; the setting is a number of minutes (0 = never).
+  const unloadOptions = $derived(
+    [2, 5, 15, 30, 0].map((n) => ({
+      value: String(n),
+      label: n ? t("models.unload.after", { n }) : t("models.unload.never"),
+    })),
+  );
+
   onMount(() => {
     if (!IS_MAC) gpuInfo().then((g) => (gpu = g)).catch(() => {});
     checkPython()
@@ -130,6 +138,24 @@
             </div>
             <div class="control">
               <Select value={v.localDevice} options={deviceOptions} align="right" onchange={(localDevice) => store.patch({ localDevice })} />
+            </div>
+          </div>
+        </div>
+      {/if}
+      {#if g.local}
+        <div class="card">
+          <div class="row tall">
+            <div class="row-text">
+              <strong>{t("models.unload.title")}</strong>
+              <small>{t("models.unload.sub")}</small>
+            </div>
+            <div class="control">
+              <Select
+                value={String(v.localUnloadMinutes)}
+                options={unloadOptions}
+                align="right"
+                onchange={(m) => store.patch({ localUnloadMinutes: Number(m) })}
+              />
             </div>
           </div>
         </div>

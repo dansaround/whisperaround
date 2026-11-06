@@ -348,6 +348,12 @@ const dict: Dict = {
       download: "Elegir GPU descarga las bibliotecas NVIDIA CUDA (~1,5 GB) una sola vez",
       ready: "Bibliotecas CUDA instaladas",
     },
+    unload: {
+      title: "Liberar memoria en reposo",
+      sub: "Detiene el modelo local tras un rato sin dictar. Se vuelve a cargar mientras hablas (unos segundos)",
+      after: "A los {n} min",
+      never: "Nunca",
+    },
     python: {
       checking: "Comprobando Python…",
       notFound: "No se encontró Python 3",

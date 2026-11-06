@@ -346,6 +346,12 @@ const dict: Dict = {
       download: "选择 GPU 会下载 NVIDIA CUDA 库（~1.5 GB），仅需一次",
       ready: "CUDA 库已安装",
     },
+    unload: {
+      title: "空闲时释放内存",
+      sub: "一段时间未听写后停止本地模型。说话时会重新加载（几秒钟）",
+      after: "{n} 分钟后",
+      never: "从不",
+    },
     python: {
       checking: "正在检查 Python…",
       notFound: "未找到 Python 3",

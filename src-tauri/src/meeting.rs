@@ -81,6 +81,12 @@ struct Inner {
 #[derive(Default)]
 pub struct MeetingState(Mutex<Inner>);
 
+/// Whether a meeting is recording or still transcribing its last chunks.
+pub fn is_active(app: &AppHandle) -> bool {
+    let inner = app.state::<MeetingState>().0.lock().unwrap();
+    inner.view.active || inner.view.finishing
+}
+
 /// A slice of one track, ready to be transcribed.
 struct Chunk {
     speaker: Option<TrackKind>,
@@ -472,6 +478,8 @@ pub fn start(app: &AppHandle) {
             return;
         }
     };
+    // Reload a local model unloaded for being idle while the meeting starts.
+    local::prewarm(app, &model);
 
     let job = Job {
         local: local::model_name(&model).map(String::from),

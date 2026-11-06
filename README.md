@@ -198,7 +198,9 @@ deja el texto en el portapapeles, auto-pegándolo (Ctrl/Cmd+V) en la app enfocad
   - `recorder.rs` — captura nativa del micrófono con `cpal`, encode a WAV con `hound`.
   - `whisper.rs` — POST multipart a `v1/audio/transcriptions` con `reqwest`.
   - `local.rs` — transcripción local con faster-whisper: venv privado + worker
-    Python persistente (`resources/fw_server.py`) que mantiene el modelo cargado.
+    Python (`resources/fw_server.py`) que mantiene el modelo cargado; se apaga
+    si el modelo activo no es local o tras unos minutos sin dictar, y se vuelve
+    a cargar al empezar a grabar.
   - `inject.rs` — escribe el portapapeles y simula Ctrl/Cmd+V con `enigo`.
   - `pipeline.rs` — máquina de estados Idle → Recording → Processing → Idle.
   - `settings.rs` — persiste ajustes en el config dir.
@@ -300,6 +302,10 @@ evitar el toolchain cruzado bajo WSL2.
     (la píldora muestra el spinner mientras tanto). Los modelos se toman de la
     caché de Hugging Face (`~/.cache/huggingface`), así que los ya descargados no
     se vuelven a bajar.
+    Para no ocupar RAM/VRAM sin uso, el worker se detiene tras 5 minutos sin
+    dictar (configurable en Modelos: 2, 5, 15, 30 min o nunca) y al cambiar a un
+    modelo de la nube. Al pulsar el atajo se vuelve a cargar mientras hablas
+    (~2–4 s con `medium`), así que solo un dictado muy corto nota la espera.
 - Bajo WSLg el auto-paste actúa sobre la sesión WSLg; valida el Ctrl+V real en el
   build nativo de Windows.
 

@@ -51,7 +51,10 @@ fn start(app: &AppHandle) {
     }
     // Plays while the mic opens; short enough not to matter to Whisper.
     sounds::play(app, Sound::Start);
-    let device = state.settings.lock().unwrap().input_device.clone();
+    let (device, model) = {
+        let settings = state.settings.lock().unwrap();
+        (settings.input_device.clone(), settings.effective_model().to_string())
+    };
     // Live input level for the pill's waveform (`level` event, 0.0..=1.0).
     let level_app = app.clone();
     let on_level = move |level: f32| {
@@ -62,6 +65,8 @@ fn start(app: &AppHandle) {
         Ok(rec) => {
             *state.recorder.lock().unwrap() = Some(rec);
             set_status(app, AppStatus::Recording, None);
+            // Reload a local model unloaded for being idle while the user speaks.
+            local::prewarm(app, &model);
         }
         Err(e) => {
             let key = if matches!(source, recorder::Source::Mic(_)) {

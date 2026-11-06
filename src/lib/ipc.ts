@@ -94,6 +94,7 @@ let previewSettings: SettingsView = {
   saveHistory: true,
   uiLanguage: new URLSearchParams(location.search).get("lang") ?? "en",
   localDevice: "auto",
+  localUnloadMinutes: 5,
 };
 
 function previewHistory(): History {

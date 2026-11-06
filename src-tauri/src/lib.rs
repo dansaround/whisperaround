@@ -77,6 +77,7 @@ pub fn run() {
             window::localize_titles(&app.handle());
             // Preload a local faster-whisper model if it is the active one.
             commands::warm_local_model(&app.handle(), &model);
+            local::start_idle_unloader(app.handle().clone());
 
             // Pin the floating pill to the top-center of the screen on launch.
             // Also disable the OS window shadow at runtime (belt-and-suspenders

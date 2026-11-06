@@ -130,6 +130,10 @@ pub struct Settings {
     /// Where local faster-whisper models run: `auto` | `cpu` | `cuda`.
     #[serde(default = "default_local_device")]
     pub local_device: String,
+    /// Minutes without transcribing before the local worker is stopped to
+    /// free its memory (`0` = keep it loaded).
+    #[serde(default = "default_local_unload_minutes")]
+    pub local_unload_minutes: u32,
 }
 
 fn default_model() -> String {
@@ -171,6 +175,13 @@ fn default_start_sound() -> String {
 fn default_ui_language() -> String {
     "en".into()
 }
+/// Accepted values for `local_unload_minutes` (`0` = never).
+pub const LOCAL_UNLOAD_MINUTES: &[u32] = &[2, 5, 15, 30, 0];
+
+fn default_local_unload_minutes() -> u32 {
+    5
+}
+
 fn default_local_device() -> String {
     "auto".into()
 }
@@ -232,6 +243,7 @@ pub struct SettingsView {
     pub save_history: bool,
     pub ui_language: String,
     pub local_device: String,
+    pub local_unload_minutes: u32,
 }
 
 /// Partial update from the frontend: every field is optional so the settings
@@ -271,6 +283,7 @@ pub struct SettingsPatch {
     pub save_history: Option<bool>,
     pub ui_language: Option<String>,
     pub local_device: Option<String>,
+    pub local_unload_minutes: Option<u32>,
 }
 
 fn one_of(value: String, allowed: &[&str], field: &str) -> Result<String, String> {
@@ -487,6 +500,12 @@ impl Settings {
         if let Some(v) = patch.local_device {
             self.local_device = one_of(v, &["auto", "cpu", "cuda"], "localDevice")?;
         }
+        if let Some(v) = patch.local_unload_minutes {
+            if !LOCAL_UNLOAD_MINUTES.contains(&v) {
+                return Err(tf("settings.invalidValue", &[("field", &"localUnloadMinutes"), ("value", &v)]));
+            }
+            self.local_unload_minutes = v;
+        }
         self.normalize();
         self.model = self.effective_model().to_string();
         Ok(())
@@ -537,6 +556,7 @@ impl Settings {
             save_history: self.save_history,
             ui_language: self.ui_language.clone(),
             local_device: self.local_device.clone(),
+            local_unload_minutes: self.local_unload_minutes,
         }
     }
 }
@@ -688,8 +708,19 @@ mod tests {
         assert_eq!(s.start_sound, "orus");
         assert_eq!(s.ui_language, "en");
         assert_eq!(s.local_device, "auto");
+        assert_eq!(s.local_unload_minutes, 5);
         assert_eq!(s.effective_model(), "whisper-1");
         assert_eq!(s.active_mode, "default");
+    }
+
+    #[test]
+    fn local_unload_minutes_accepts_known_values_only() {
+        let mut s = Settings::default();
+        let patch = |v: u32| SettingsPatch { local_unload_minutes: Some(v), ..Default::default() };
+        s.apply_patch(patch(0)).unwrap();
+        assert_eq!(s.local_unload_minutes, 0);
+        assert!(s.apply_patch(patch(7)).is_err());
+        assert_eq!(s.local_unload_minutes, 0);
     }
 
     #[test]

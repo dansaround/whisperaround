@@ -97,6 +97,8 @@ export interface SettingsView {
   /** Interface language (see `Locale` in `i18n/index.svelte.ts`). */
   uiLanguage: string;
   localDevice: LocalDevice;
+  /** Minutes without dictating before the local model is unloaded (`0` = never). */
+  localUnloadMinutes: number;
 }
 
 /** `mix` = microphone + system audio (Windows only, like `system`). */

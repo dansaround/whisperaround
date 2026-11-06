@@ -31,6 +31,12 @@ export default {
     download: "Choosing GPU downloads the NVIDIA CUDA libraries (~1.5 GB) once",
     ready: "CUDA libraries installed",
   },
+  unload: {
+    title: "Free memory when idle",
+    sub: "Stops the local model after a while without dictating. It loads again while you speak (a few seconds)",
+    after: "After {n} min",
+    never: "Never",
+  },
   python: {
     checking: "Checking Python…",
     notFound: "Python 3 not found",

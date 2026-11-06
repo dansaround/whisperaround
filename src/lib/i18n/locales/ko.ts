@@ -347,6 +347,12 @@ const dict: Dict = {
       download: "GPU를 선택하면 NVIDIA CUDA 라이브러리(~1.5 GB)를 한 번 다운로드합니다",
       ready: "CUDA 라이브러리 설치됨",
     },
+    unload: {
+      title: "유휴 시 메모리 해제",
+      sub: "한동안 받아쓰기가 없으면 로컬 모델을 중지합니다. 말하는 동안 다시 로드됩니다(몇 초)",
+      after: "{n}분 후",
+      never: "안 함",
+    },
     python: {
       checking: "Python 확인 중…",
       notFound: "Python 3을 찾을 수 없음",
