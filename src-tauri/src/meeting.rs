@@ -83,7 +83,8 @@ pub struct MeetingState(Mutex<Inner>);
 
 /// Whether a meeting is recording or still transcribing its last chunks.
 pub fn is_active(app: &AppHandle) -> bool {
-    let inner = app.state::<MeetingState>().0.lock().unwrap();
+    let state = app.state::<MeetingState>();
+    let inner = state.0.lock().unwrap();
     inner.view.active || inner.view.finishing
 }
 
