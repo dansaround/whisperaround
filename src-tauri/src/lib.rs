@@ -72,7 +72,12 @@ pub fn run() {
             let hide_pill = loaded.pill_style == "none";
             i18n::set_language(&loaded.ui_language);
             app.set_theme(commands::theme_of(&loaded.theme));
+            let view = loaded.view();
             *app.state::<AppState>().settings.lock().unwrap() = loaded;
+            // The config windows already exist, and one that asked for its
+            // settings before this point got the defaults (the pill then shows
+            // another model than the settings window). Send the real ones.
+            let _ = app.emit("settings-changed", view);
             *app.state::<history::HistoryState>().0.lock().unwrap() = history::load(&app.handle());
             window::localize_titles(&app.handle());
             // Preload a local faster-whisper model if it is the active one.
