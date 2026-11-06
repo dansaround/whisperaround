@@ -81,6 +81,13 @@ struct Inner {
 #[derive(Default)]
 pub struct MeetingState(Mutex<Inner>);
 
+/// Whether a meeting is recording or still transcribing its last chunks.
+pub fn is_active(app: &AppHandle) -> bool {
+    let state = app.state::<MeetingState>();
+    let inner = state.0.lock().unwrap();
+    inner.view.active || inner.view.finishing
+}
+
 /// A slice of one track, ready to be transcribed.
 struct Chunk {
     speaker: Option<TrackKind>,
@@ -328,7 +335,8 @@ fn transcribe_chunk(app: &AppHandle, job: &Job, samples: &[f32]) -> Result<Strin
     let wav = recorder::encode_wav(samples)?;
     match &job.local {
         Some(name) => local::transcribe(app, name, &wav, &job.opts),
-        // This is a plain thread, not an async task.
+        // This is a plain thread, not an async task. A live model here uses the file model
+        // (`whisper::transcribe` maps it), since meetings transcribe in chunks, not over the socket.
         None => tauri::async_runtime::block_on(whisper::transcribe(&job.api_key, &job.model, wav, &job.opts)),
     }
 }
@@ -472,6 +480,9 @@ pub fn start(app: &AppHandle) {
             return;
         }
     };
+    // Reload a local model unloaded for being idle while the meeting starts.
+    local::prewarm(app, &model);
+    crate::window::restore_pill(app);
 
     let job = Job {
         local: local::model_name(&model).map(String::from),
@@ -480,6 +491,7 @@ pub fn start(app: &AppHandle) {
         opts: whisper::Options {
             language: settings.effective_language().to_string(),
             prompt: settings.vocabulary_prompt(),
+            keywords: settings.vocabulary_keywords(),
         },
         save_history: settings.save_history,
         autosave: settings.meeting_autosave,

@@ -62,6 +62,9 @@ pub fn set_status(app: &AppHandle, status: AppStatus, message: Option<String>) {
     if (previous == AppStatus::Recording) != (status == AppStatus::Recording) {
         crate::shortcuts::sync_cancel(app);
     }
+    if status == AppStatus::Recording && previous != AppStatus::Recording {
+        crate::window::restore_pill(app);
+    }
     if status == AppStatus::Error && previous != AppStatus::Error {
         crate::sounds::play(app, crate::sounds::Sound::Error);
     }

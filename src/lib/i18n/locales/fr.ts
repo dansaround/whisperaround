@@ -5,9 +5,8 @@ const dict: Dict = {
   common: {
     autoDetect: "Détection automatique",
     modelDesc: {
-      "gpt-4o-mini-transcribe": "Rapide et abordable. Le meilleur équilibre pour dicter toute la journée.",
-      "gpt-4o-transcribe": "Le modèle le plus précis d’OpenAI — idéal pour le jargon, les noms et les accents.",
-      "whisper-1": "Le Whisper classique, dans le cloud. Robuste et prévisible.",
+      "gpt-transcribe": "Le modèle de transcription actuel d’OpenAI, précis avec les noms et le jargon. Il utilise votre vocabulaire comme mots-clés.",
+      "gpt-live-transcribe": "Transcrit votre voix pendant que vous parlez, pour que le texte soit prêt dès que vous arrêtez. Coûte environ 4 fois plus.",
       "local:small": "S’exécute sur votre ordinateur — sans Internet ni clé API. Léger et rapide.",
       "local:medium": "Local et privé, plus précis mais plus gourmand en mémoire.",
       "local:turbo": "Whisper large-v3 turbo, accéléré par les puces Apple. Précision maximale, entièrement hors ligne.",
@@ -351,6 +350,16 @@ const dict: Dict = {
       noGpu: "Aucun GPU NVIDIA détecté",
       download: "Choisir le GPU télécharge les bibliothèques NVIDIA CUDA (~1,5 Go) une seule fois",
       ready: "Bibliothèques CUDA installées",
+    },
+    unload: {
+      title: "Libérer la mémoire au repos",
+      sub: "Arrête le modèle local après un moment sans dictée. Il se recharge pendant que vous parlez (quelques secondes)",
+      after: "Après {n} min",
+      never: "Jamais",
+    },
+    liveTyping: {
+      title: "Saisir en parlant",
+      sub: "Le texte est saisi dans l’app pendant que vous parlez. Désactivé, il s’affiche dans la pill et se colle à la fin.",
     },
     python: {
       checking: "Vérification de Python…",

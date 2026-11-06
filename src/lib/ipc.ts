@@ -58,7 +58,7 @@ export const NATIVE_SHORTCUTS = IS_MAC || IS_WINDOWS;
 /** Mock settings used only for the browser UI preview. */
 let previewSettings: SettingsView = {
   apiKeyConfigured: true,
-  model: "gpt-4o-mini-transcribe",
+  model: "gpt-transcribe",
   language: "",
   shortcut: "mod:MetaRight",
   cancelShortcut: "Escape",
@@ -75,6 +75,7 @@ let previewSettings: SettingsView = {
   echoCancel: true,
   meetingAudioDump: false,
   autoPaste: true,
+  liveTyping: false,
   theme: "auto",
   pillStyle: "mini",
   pillAlwaysShow: true,
@@ -85,8 +86,8 @@ let previewSettings: SettingsView = {
   startSound: "orus",
   vocabulary: ["WhisperAround", "Tauri", "Svelte"],
   modes: [
-    { id: "default", name: "Default", icon: "sparkle", model: "gpt-4o-mini-transcribe", language: "" },
-    { id: "message", name: "Message", icon: "message", model: "gpt-4o-transcribe", language: "es" },
+    { id: "default", name: "Default", icon: "sparkle", model: "gpt-transcribe", language: "" },
+    { id: "message", name: "Message", icon: "message", model: "gpt-live-transcribe", language: "es" },
     { id: "local", name: "Local", icon: "laptop", model: "local:small", language: "" },
   ],
   activeMode: "default",
@@ -94,6 +95,7 @@ let previewSettings: SettingsView = {
   saveHistory: true,
   uiLanguage: new URLSearchParams(location.search).get("lang") ?? "en",
   localDevice: "auto",
+  localUnloadMinutes: 5,
 };
 
 function previewHistory(): History {
@@ -114,7 +116,7 @@ function previewHistory(): History {
     text,
     words: text.split(/\s+/).length,
     durationMs: 3_000 + i * 1_700,
-    model: i % 2 ? "gpt-4o-transcribe" : "gpt-4o-mini-transcribe",
+    model: i % 2 ? "gpt-live-transcribe" : "gpt-transcribe",
     mode: i % 2 ? "Message" : "Default",
     app: apps[i],
     meeting: false,
@@ -609,4 +611,10 @@ export function currentWindowLabel(): string {
   // Browser preview: `?window=welcome` previews another window.
   if (!IN_TAURI) return new URLSearchParams(location.search).get("window") ?? "main";
   return getCurrentWindow().label;
+}
+
+/** Live transcript so far while dictating with a streaming model ("" clears it). */
+export function onLiveText(handler: (text: string) => void): Promise<UnlistenFn> {
+  if (!IN_TAURI) return Promise.resolve(() => {});
+  return listen<{ text: string }>("live-text", (event) => handler(event.payload.text));
 }

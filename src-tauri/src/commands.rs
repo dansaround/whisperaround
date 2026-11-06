@@ -219,9 +219,13 @@ pub fn clear_history(app: AppHandle) -> Result<(), String> {
 
 /// If `model` is a local faster-whisper model, prepare it in the background.
 /// The first-time venv or CUDA libraries install is surfaced as `Processing`
-/// so the pill shows it is busy; a plain model load stays silent.
+/// so the pill shows it is busy; a plain model load stays silent. A cloud
+/// model stops the local worker instead, freeing its memory.
 pub fn warm_local_model(app: &AppHandle, model: &str) {
     let Some(name) = local::model_name(model) else {
+        let app = app.clone();
+        // Off the caller's thread: waits for a transcription still running.
+        tauri::async_runtime::spawn_blocking(move || local::unload(&app));
         return;
     };
     let (app, name) = (app.clone(), name.to_string());

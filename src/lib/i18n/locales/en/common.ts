@@ -2,9 +2,8 @@
 export default {
   autoDetect: "Auto-detect",
   modelDesc: {
-    "gpt-4o-mini-transcribe": "Fast and affordable. The best balance for all-day dictation.",
-    "gpt-4o-transcribe": "OpenAI's most accurate model — great with jargon, names and accents.",
-    "whisper-1": "The classic Whisper in the cloud. Robust and predictable.",
+    "gpt-transcribe": "OpenAI's current transcription model. Accurate with names and jargon, and uses your vocabulary as keywords.",
+    "gpt-live-transcribe": "Streams your voice while you speak, so the text is ready the moment you stop. Costs about 4x more.",
     "local:small": "Runs on your computer — no internet, no API key. Light and quick.",
     "local:medium": "Local and private, more accurate at the cost of more memory.",
     "local:turbo": "Whisper large-v3 turbo, accelerated on Apple silicon. Top accuracy, fully offline.",

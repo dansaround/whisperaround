@@ -31,6 +31,16 @@ export default {
     download: "Choosing GPU downloads the NVIDIA CUDA libraries (~1.5 GB) once",
     ready: "CUDA libraries installed",
   },
+  unload: {
+    title: "Free memory when idle",
+    sub: "Stops the local model after a while without dictating. It loads again while you speak (a few seconds)",
+    after: "After {n} min",
+    never: "Never",
+  },
+  liveTyping: {
+    title: "Type as you speak",
+    sub: "Text is typed into the app as you talk. If off, it shows in the pill and is pasted when you stop.",
+  },
   python: {
     checking: "Checking Python…",
     notFound: "Python 3 not found",

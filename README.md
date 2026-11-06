@@ -197,8 +197,11 @@ deja el texto en el portapapeles, auto-pegándolo (Ctrl/Cmd+V) en la app enfocad
 - **Backend** (`src-tauri/src/`): Rust. Todo el pipeline crítico:
   - `recorder.rs` — captura nativa del micrófono con `cpal`, encode a WAV con `hound`.
   - `whisper.rs` — POST multipart a `v1/audio/transcriptions` con `reqwest`.
+  - `live.rs` — `gpt-live-transcribe`: envía el audio por WebSocket mientras grabas; muestra el texto en vivo en el pill (evento `live-text`) y, opcionalmente, lo escribe en la app mientras hablas («Escribir mientras hablas»); al soltar hace commit y si falla usa `gpt-transcribe` con el WAV.
   - `local.rs` — transcripción local con faster-whisper: venv privado + worker
-    Python persistente (`resources/fw_server.py`) que mantiene el modelo cargado.
+    Python (`resources/fw_server.py`) que mantiene el modelo cargado; se apaga
+    si el modelo activo no es local o tras unos minutos sin dictar, y se vuelve
+    a cargar al empezar a grabar.
   - `inject.rs` — escribe el portapapeles y simula Ctrl/Cmd+V con `enigo`.
   - `pipeline.rs` — máquina de estados Idle → Recording → Processing → Idle.
   - `settings.rs` — persiste ajustes en el config dir.
@@ -291,8 +294,13 @@ evitar el toolchain cruzado bajo WSL2.
 ### Notas
 
 - Modelo configurable en Ajustes o en el dropdown de la píldora:
-  - OpenAI (nube): `whisper-1`, `gpt-4o-transcribe`, `gpt-4o-mini-transcribe`
-    (por defecto).
+  - OpenAI (nube):
+    - `gpt-transcribe` (por defecto, $0,0045/min).
+    - `gpt-live-transcribe` (en vivo por WebSocket, $0,017/min; si falla vuelve a
+      `gpt-transcribe`).
+    - `whisper-1`, `gpt-4o-transcribe` y `gpt-4o-mini-transcribe` se quitaron
+      porque OpenAI los da de baja el 2027-02-26. Los ajustes guardados con
+      ellos pasan solos a `gpt-transcribe`.
   - Local (sin API key, el audio no sale del equipo): `faster-whisper small` y
     `faster-whisper medium` (CPU, int8). Requiere Python 3 instalado: la primera
     vez la app crea un venv en su carpeta de datos local
@@ -300,6 +308,10 @@ evitar el toolchain cruzado bajo WSL2.
     (la píldora muestra el spinner mientras tanto). Los modelos se toman de la
     caché de Hugging Face (`~/.cache/huggingface`), así que los ya descargados no
     se vuelven a bajar.
+    Para no ocupar RAM/VRAM sin uso, el worker se detiene tras 5 minutos sin
+    dictar (configurable en Modelos: 2, 5, 15, 30 min o nunca) y al cambiar a un
+    modelo de la nube. Al pulsar el atajo se vuelve a cargar mientras hablas
+    (~2–4 s con `medium`), así que solo un dictado muy corto nota la espera.
 - Bajo WSLg el auto-paste actúa sobre la sesión WSLg; valida el Ctrl+V real en el
   build nativo de Windows.
 

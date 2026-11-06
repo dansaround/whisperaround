@@ -19,25 +19,18 @@ export interface ModelOption {
 
 export const MODELS: ModelOption[] = [
   {
-    id: "gpt-4o-mini-transcribe",
-    label: "gpt-4o-mini-transcribe",
-    local: false,
-    speed: 5,
-    accuracy: 4,
-  },
-  {
-    id: "gpt-4o-transcribe",
-    label: "gpt-4o-transcribe",
+    id: "gpt-transcribe",
+    label: "gpt-transcribe",
     local: false,
     speed: 4,
     accuracy: 5,
   },
   {
-    id: "whisper-1",
-    label: "whisper-1",
+    id: "gpt-live-transcribe",
+    label: "gpt-live-transcribe",
     local: false,
-    speed: 4,
-    accuracy: 3,
+    speed: 5,
+    accuracy: 4,
   },
   {
     id: "local:small",

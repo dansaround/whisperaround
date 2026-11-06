@@ -148,7 +148,7 @@ mod tests {
             text: "hola".into(),
             words,
             duration_ms: 1000,
-            model: "whisper-1".into(),
+            model: "gpt-transcribe".into(),
             mode: "Default".into(),
             app: app.map(Into::into),
             meeting: false,

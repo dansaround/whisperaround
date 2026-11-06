@@ -529,6 +529,31 @@ impl Recorder {
         self.tracks.iter().map(|t| t.lock().unwrap().take()).collect()
     }
 
+    /// Mixed audio (as in [`Recording::mixed`]) from frame `from` on, without
+    /// draining, so it is still in the final recording. Stops at the shortest
+    /// track so a mix stays aligned. Only for recorders that are never drained.
+    pub fn mixed_since(&self, from: usize) -> Vec<f32> {
+        // Flush without draining: `done` keeps every sample, so the indexes
+        // match the ones of the final recording.
+        let mut tracks: Vec<std::sync::MutexGuard<'_, TrackBuf>> =
+            self.tracks.iter().map(|t| t.lock().unwrap()).collect();
+        for track in tracks.iter_mut() {
+            track.flush();
+        }
+        let end = tracks.iter().map(|t| t.done.len()).min().unwrap_or(0);
+        if end <= from {
+            return Vec::new();
+        }
+        let mut out = vec![0.0f32; end - from];
+        for track in &tracks {
+            for (o, s) in out.iter_mut().zip(&track.done[from..end]) {
+                *o += s;
+            }
+        }
+        out.iter_mut().for_each(|s| *s = s.clamp(-1.0, 1.0));
+        out
+    }
+
     /// Stop capturing and return everything not drained yet.
     pub fn stop(self) -> Result<Recording> {
         let _ = self.stop_tx.send(());

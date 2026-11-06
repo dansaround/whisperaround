@@ -81,6 +81,8 @@ export interface SettingsView {
   /** Save the raw and processed meeting audio as WAV next to the transcript. */
   meetingAudioDump: boolean;
   autoPaste: boolean;
+  /** Type the live transcript into the focused app while speaking (gpt-live-transcribe). */
+  liveTyping: boolean;
   theme: Theme;
   pillStyle: PillStyle;
   pillAlwaysShow: boolean;
@@ -97,6 +99,8 @@ export interface SettingsView {
   /** Interface language (see `Locale` in `i18n/index.svelte.ts`). */
   uiLanguage: string;
   localDevice: LocalDevice;
+  /** Minutes without dictating before the local model is unloaded (`0` = never). */
+  localUnloadMinutes: number;
 }
 
 /** `mix` = microphone + system audio (Windows only, like `system`). */

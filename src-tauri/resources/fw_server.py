@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """Local faster-whisper worker for WhisperAround.
 
-Spawned once by the Rust backend (`src-tauri/src/local.rs`) and kept alive so
-models stay loaded between dictations. Speaks JSON lines over stdin/stdout:
+Spawned by the Rust backend (`src-tauri/src/local.rs`) and kept alive so the
+model stays loaded between dictations; the backend stops it when it sits idle. Speaks JSON lines over stdin/stdout:
 
     -> {"cmd": "load", "model": "small", "device": "cpu"}
     -> {"cmd": "transcribe", "model": "medium", "device": "cuda", "path": "C:/.../audio.wav"}
@@ -11,7 +11,7 @@ models stay loaded between dictations. Speaks JSON lines over stdin/stdout:
     <- {"ok": true, "text": "..."} | {"ok": false, "error": "..."}
 
 `device` is `cpu` (int8) or `cuda` (float16, needs the NVIDIA wheels in this
-venv); models are cached per (name, device). `cuda` replies with the number of
+venv); the last model used stays loaded, keyed by (name, device). `cuda` replies with the number of
 CUDA devices CTranslate2 sees.
 
 Models are fetched from (or reused in) the Hugging Face cache, so the
@@ -66,8 +66,19 @@ def get_model(name, device="cpu"):
     if key not in _models:
         from faster_whisper import WhisperModel
 
+        # One model at a time: switching models frees the previous one.
+        drop_models()
         _models[key] = WhisperModel(name, device=device, compute_type=COMPUTE[device])
     return _models[key]
+
+
+def drop_models():
+    """Free the loaded faster-whisper models (RAM and VRAM)."""
+    if _models:
+        _models.clear()
+        import gc
+
+        gc.collect()
 
 
 def load_wav(path):
@@ -103,6 +114,8 @@ def speech_only(audio):
 
 def transcribe_mlx(folder, audio, language=None, prompt=None):
     import mlx_whisper
+
+    drop_models()  # mlx-whisper keeps its own (single) model
 
     result = mlx_whisper.transcribe(
         audio,
