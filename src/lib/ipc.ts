@@ -75,6 +75,7 @@ let previewSettings: SettingsView = {
   echoCancel: true,
   meetingAudioDump: false,
   autoPaste: true,
+  liveTyping: false,
   theme: "auto",
   pillStyle: "mini",
   pillAlwaysShow: true,
@@ -610,4 +611,10 @@ export function currentWindowLabel(): string {
   // Browser preview: `?window=welcome` previews another window.
   if (!IN_TAURI) return new URLSearchParams(location.search).get("window") ?? "main";
   return getCurrentWindow().label;
+}
+
+/** Live transcript so far while dictating with a streaming model ("" clears it). */
+export function onLiveText(handler: (text: string) => void): Promise<UnlistenFn> {
+  if (!IN_TAURI) return Promise.resolve(() => {});
+  return listen<{ text: string }>("live-text", (event) => handler(event.payload.text));
 }

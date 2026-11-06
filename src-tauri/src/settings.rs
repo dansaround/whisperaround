@@ -43,6 +43,10 @@ pub struct Settings {
     pub shortcut: String,
     #[serde(default = "default_auto_paste")]
     pub auto_paste: bool,
+    /// With gpt-live-transcribe, type the text into the focused app as it is
+    /// spoken instead of pasting it at the end.
+    #[serde(default)]
+    pub live_typing: bool,
     /// Whether the first-launch welcome window has been dismissed.
     #[serde(default)]
     pub onboarded: bool,
@@ -228,6 +232,7 @@ pub struct SettingsView {
     pub echo_cancel: bool,
     pub meeting_audio_dump: bool,
     pub auto_paste: bool,
+    pub live_typing: bool,
     pub theme: String,
     pub pill_style: String,
     pub pill_always_show: bool,
@@ -268,6 +273,7 @@ pub struct SettingsPatch {
     pub echo_cancel: Option<bool>,
     pub meeting_audio_dump: Option<bool>,
     pub auto_paste: Option<bool>,
+    pub live_typing: Option<bool>,
     pub theme: Option<String>,
     pub pill_style: Option<String>,
     pub pill_always_show: Option<bool>,
@@ -463,6 +469,9 @@ impl Settings {
         if let Some(v) = patch.auto_paste {
             self.auto_paste = v;
         }
+        if let Some(v) = patch.live_typing {
+            self.live_typing = v;
+        }
         if let Some(v) = patch.theme {
             self.theme = one_of(v, &["auto", "light", "dark"], "theme")?;
         }
@@ -555,6 +564,7 @@ impl Settings {
             echo_cancel: self.echo_cancel,
             meeting_audio_dump: self.meeting_audio_dump,
             auto_paste: self.auto_paste,
+            live_typing: self.live_typing,
             theme: self.theme.clone(),
             pill_style: self.pill_style.clone(),
             pill_always_show: self.pill_always_show,
@@ -715,6 +725,7 @@ mod tests {
         s.normalize();
         assert_eq!(s.shortcut, default_shortcut());
         assert!(s.auto_paste);
+        assert!(!s.live_typing);
         assert!(!s.onboarded);
         assert_eq!(s.pill_style, "mini");
         assert_eq!(s.pill_position, "top");

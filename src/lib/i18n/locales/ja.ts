@@ -353,6 +353,10 @@ const dict: Dict = {
       after: "{n}分後",
       never: "しない",
     },
+    liveTyping: {
+      title: "話しながら入力",
+      sub: "話している間にテキストがアプリに入力されます。オフの場合はピルに表示され、終了時にペーストされます。",
+    },
     python: {
       checking: "Pythonを確認中…",
       notFound: "Python 3が見つかりません",

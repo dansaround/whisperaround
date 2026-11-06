@@ -51,7 +51,7 @@ fn start(app: &AppHandle) {
     }
     // Plays while the mic opens; short enough not to matter to Whisper.
     sounds::play(app, Sound::Start);
-    let (device, model, api_key, opts) = {
+    let (device, model, api_key, opts, live_typing) = {
         let settings = state.settings.lock().unwrap();
         (
             settings.input_device.clone(),
@@ -62,6 +62,7 @@ fn start(app: &AppHandle) {
                 prompt: None,
                 keywords: settings.vocabulary_keywords(),
             },
+            settings.live_typing,
         )
     };
     // Live input level for the pill's waveform (`level` event, 0.0..=1.0).
@@ -78,7 +79,7 @@ fn start(app: &AppHandle) {
             local::prewarm(app, &model);
             // Without a key the file path reports the missing key, so don't stream.
             if model == whisper::LIVE_MODEL && !api_key.trim().is_empty() {
-                live::start(app, api_key, opts);
+                live::start(app, api_key, opts, live_typing);
             }
         }
         Err(e) => {
@@ -94,7 +95,7 @@ fn start(app: &AppHandle) {
 
 /// Discard the current recording without transcribing it.
 pub fn cancel(app: &AppHandle) {
-    live::cancel();
+    live::cancel(app);
     let state = app.state::<AppState>();
     let Some(rec) = state.recorder.lock().unwrap().take() else {
         return;
@@ -118,7 +119,7 @@ fn stop_and_transcribe(app: &AppHandle) {
     let recording = match rec.stop() {
         Ok(r) => r,
         Err(e) => {
-            live::cancel();
+            live::cancel(app);
             set_status(app, AppStatus::Error, Some(tf("error.recording.failed", &[("error", &e)])));
             return;
         }
@@ -133,7 +134,7 @@ fn stop_and_transcribe(app: &AppHandle) {
         recorder::Source::Mix(_) => (recording.is_digital_silence(), SILENT_MIC),
     };
     if silent {
-        live::cancel();
+        live::cancel(app);
         set_status(app, AppStatus::Error, Some(t(message)));
         return;
     }
@@ -142,7 +143,7 @@ fn stop_and_transcribe(app: &AppHandle) {
     let wav = match recorder::encode_wav(&mixed) {
         Ok(w) => w,
         Err(e) => {
-            live::cancel();
+            live::cancel(app);
             set_status(app, AppStatus::Error, Some(tf("error.recording.encode", &[("error", &e)])));
             return;
         }
@@ -161,6 +162,9 @@ fn stop_and_transcribe(app: &AppHandle) {
 
     // Off-load the network call / local inference so the UI stays responsive.
     tauri::async_runtime::spawn(async move {
+        // What the live session typed into the app, and whether the text comes from it.
+        let mut typed = String::new();
+        let mut from_live = false;
         let result = match local::model_name(&model) {
             Some(name) => {
                 let (app2, name, opts) = (app.clone(), name.to_string(), opts.clone());
@@ -172,13 +176,20 @@ fn stop_and_transcribe(app: &AppHandle) {
             }
             None => {
                 // The live session already has the audio; the WAV is only the fallback.
-                let live_text = if model == whisper::LIVE_MODEL {
+                let live = if model == whisper::LIVE_MODEL {
                     live::finish(&mixed).await
                 } else {
                     None
                 };
-                match live_text {
-                    Some(text) => Ok(text),
+                // A failed session may still have typed something; remember it.
+                if let Some(live) = &live {
+                    typed = live.typed.clone();
+                }
+                match live.and_then(|l| l.text) {
+                    Some(text) => {
+                        from_live = true;
+                        Ok(text)
+                    }
                     None => whisper::transcribe(&settings.openai_api_key, &model, wav, &opts).await,
                 }
             }
@@ -194,7 +205,18 @@ fn stop_and_transcribe(app: &AppHandle) {
                     set_status(&app, AppStatus::Error, Some(e.to_string()));
                     return;
                 }
-                if settings.auto_paste {
+                if !typed.trim().is_empty() {
+                    // Already typed while speaking: the clipboard has the full text for
+                    // a second paste. Only finish what the live typing left out, and
+                    // only with the live text (a fallback text may word it differently).
+                    if from_live && inject::same_app(&focused_app) {
+                        if let Some(rest) = live::remaining(&text, &typed).filter(|r| !r.is_empty()) {
+                            if let Err(e) = inject::type_text(&app, rest) {
+                                eprintln!("[whisperaround] typing the end of the text failed: {e:#}");
+                            }
+                        }
+                    }
+                } else if settings.auto_paste {
                     // Let the clipboard write settle before the paste keystroke.
                     std::thread::sleep(std::time::Duration::from_millis(120));
                     if let Err(e) = inject::paste(&app) {

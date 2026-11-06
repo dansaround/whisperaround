@@ -6,6 +6,7 @@
   import { MODELS, modelDescription, type ModelOption } from "../../models";
   import { local, formatBytes } from "../../localModels.svelte";
   import Select from "../ui/Select.svelte";
+  import Toggle from "../ui/Toggle.svelte";
   import { cancelModelDownload, checkPython, downloadModel, gpuInfo, openPythonInstall, setModel, IS_MAC, IS_WINDOWS, DOWNLOAD_CANCELLED } from "../../ipc";
   import type { GpuInfo, LocalDevice } from "../../types";
   import { t, type Key } from "../../i18n/index.svelte";
@@ -102,6 +103,17 @@
         </form>
       </div>
     </div>
+    {#if v.model === "gpt-live-transcribe"}
+      <div class="card">
+        <div class="row tall">
+          <div class="row-text">
+            <strong>{t("models.liveTyping.title")}</strong>
+            <small>{t("models.liveTyping.sub")}</small>
+          </div>
+          <div class="control"><Toggle label={t("models.liveTyping.title")} checked={v.liveTyping} onchange={(liveTyping) => store.patch({ liveTyping })} /></div>
+        </div>
+      </div>
+    {/if}
   </section>
 
   <p class="section-sub active-note">

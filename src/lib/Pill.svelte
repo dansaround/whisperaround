@@ -16,6 +16,7 @@
     startMeeting,
     stopMeeting,
     onRevealPill,
+    onLiveText,
     setModel,
     fitWindow,
     setPillInteractive,
@@ -41,6 +42,8 @@
   let alwaysShow = $state(true);
   let position = $state<PillPosition>("top");
   let skin = $state<PillSkin>("standard");
+  /** Transcript so far from a streaming model (empty when none). */
+  let liveText = $state("");
 
   // --- Local UI state -------------------------------------------------------
   let expanded = $state(false);
@@ -152,6 +155,11 @@
   /** Transparent breathing room so the expanded shell and its shadow never touch the window edge. */
   const PANEL_FRAME = 8;
   const MENU_H = 216;
+  /** Live caption: fixed box (two lines) so the window doesn't resize per fragment. */
+  const CAPTION_W = 420;
+  const CAPTION_H = 52;
+  const CAPTION_MARGIN = 12;
+  const REDUCED_MOTION = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   /** The morphing shell's shape for each visual state (CSS px). */
   type Visual = "idle" | "icons" | "rec" | "proc" | "panel";
@@ -185,6 +193,10 @@
   const onyx = $derived(skin === "onyx");
   /** Classic style: the big panel takes over while recording / transcribing. */
   const autoPanel = $derived(pillStyle === "classic" && busy);
+  /** Live caption next to the pill while a streaming model transcribes. */
+  const showCaption = $derived(
+    liveText !== "" && busy && !expanded && !autoPanel && !menuOpen && !modeToast && !noticeToast,
+  );
   /** Auto-hidden: "always show" off and nothing worth showing. */
   const hidden = $derived(
     !alwaysShow && !busy && !expanded && !menuOpen && !revealed && !modeToast && !noticeToast && !meetingOn && !(status === "error" && errorFresh),
@@ -232,6 +244,8 @@
       // Sized to the rendered toast; it sits below the pill (or above it when `bottom`).
       return { w: Math.max(COMPACT_W, noticeSize.w + NOTICE_MARGIN * 2), h: POP_OFFSET + noticeSize.h + NOTICE_MARGIN };
     }
+    if (showCaption)
+      return { w: Math.max(COMPACT_W, CAPTION_W + CAPTION_MARGIN * 2), h: POP_OFFSET + CAPTION_H + CAPTION_MARGIN };
     if (modeToast || (meetingOn && !menuOpen)) return { w: COMPACT_W, h: tipH };
     if (hidden) return IDLE;
     if (busy) return { w: COMPACT_W, h: tooltipBtn === "cancel" ? tipH : COMPACT_H };
@@ -352,11 +366,13 @@
       errorMessage = e.status === "error" ? e.message ?? null : null;
       errorUnknown = e.status === "error" && e.message == null;
       if (e.status !== "recording") levels = Array(HISTORY).fill(0);
+      if (e.status !== "processing") liveText = "";
       if (e.status !== "recording" && tooltipBtn === "cancel") tooltipBtn = null;
       clearTimeout(errorTimer);
       errorFresh = e.status === "error";
       if (errorFresh) errorTimer = setTimeout(() => (errorFresh = false), 6000);
     });
+    const unlistenLive = onLiveText((text) => (liveText = text));
     const unlistenLevel = onLevel((l) => {
       // Rise instantly, decay softly so syllables don't flicker.
       // Levels arrive at ~60 Hz: the newest bar follows every sample, while
@@ -382,6 +398,7 @@
     return () => {
       unlisten.then((fn) => fn());
       unlistenLevel.then((fn) => fn());
+      unlistenLive.then((fn) => fn());
       unlistenSettings.then((fn) => fn());
       unlistenMode.then((fn) => fn());
       unlistenNotice.then((fn) => fn());
@@ -782,17 +799,24 @@
       <span class="mode-dot" aria-hidden="true"></span>
       <span class="tt-text">{modeToast}</span>
     </div>
-  {:else if tooltip && !expanded && !autoPanel}
+  {:else if tooltip && !expanded && !autoPanel && !showCaption}
     <div class="tooltip" transition:pop={{ duration: 200 }}>
       <span class="tt-text" class:err={status === "error" && tooltipBtn === "record"}>{tooltip.text}</span>
       {#if tooltip.keys.length}
         <span class="tt-keys">{#each tooltip.keys as k (k)}<kbd>{k}</kbd>{/each}</span>
       {/if}
     </div>
-  {:else if meetingTs !== null && !expanded && !autoPanel && !menuOpen}
+  {:else if meetingTs !== null && !expanded && !autoPanel && !menuOpen && !showCaption}
     <div class="tooltip mode-toast meeting-badge" transition:pop={{ duration: 220 }}>
       <span class="meeting-dot" aria-hidden="true"></span>
       <span class="tt-text">{t("pill.meeting", { time: clock(now - meetingTs) })}</span>
+    </div>
+  {/if}
+
+  {#if showCaption}
+    <!-- Newest words stay visible: the text is bottom-aligned and the leading edge fades out. -->
+    <div class="caption" role="status" style="--cap-w:{CAPTION_W}px;--cap-h:{CAPTION_H}px" transition:pop={{ duration: REDUCED_MOTION ? 0 : 220 }}>
+      <span class="cap-text">{liveText}</span>
     </div>
   {/if}
 
@@ -989,6 +1013,7 @@
 
   /* ---------- Tooltip / menu (below the compact pill) ---------- */
   .tooltip,
+  .caption,
   .menu.compact {
     position: absolute;
     top: var(--pop);
@@ -997,6 +1022,7 @@
     transform-origin: top center;
   }
   .bottom .tooltip,
+  .bottom .caption,
   .bottom .menu.compact {
     top: auto;
     bottom: var(--pop);
@@ -1013,6 +1039,33 @@
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
     white-space: nowrap;
     color: var(--pill-text);
+  }
+  /* Live caption: same surface as the tooltips, at most two lines. */
+  .caption {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    width: var(--cap-w);
+    max-width: calc(100vw - 16px);
+    height: var(--cap-h);
+    padding: 7px 14px;
+    overflow: hidden;
+    border-radius: 12px;
+    background: var(--pill-panel);
+    border: 1px solid var(--pill-line);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+    color: var(--pill-text);
+    line-height: 1.4;
+    font-weight: 500;
+    text-align: left;
+    pointer-events: none;
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 35%);
+    mask-image: linear-gradient(to bottom, transparent 0, #000 35%);
+  }
+  .cap-text {
+    flex: none;
+    overflow-wrap: anywhere;
   }
   .mode-toast {
     padding: 6px 12px 6px 10px;

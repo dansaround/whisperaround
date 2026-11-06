@@ -197,7 +197,7 @@ deja el texto en el portapapeles, auto-pegándolo (Ctrl/Cmd+V) en la app enfocad
 - **Backend** (`src-tauri/src/`): Rust. Todo el pipeline crítico:
   - `recorder.rs` — captura nativa del micrófono con `cpal`, encode a WAV con `hound`.
   - `whisper.rs` — POST multipart a `v1/audio/transcriptions` con `reqwest`.
-  - `live.rs` — `gpt-live-transcribe`: envía el audio por WebSocket mientras grabas; al soltar hace commit y si falla usa `gpt-transcribe` con el WAV.
+  - `live.rs` — `gpt-live-transcribe`: envía el audio por WebSocket mientras grabas; muestra el texto en vivo en el pill (evento `live-text`) y, opcionalmente, lo escribe en la app mientras hablas («Escribir mientras hablas»); al soltar hace commit y si falla usa `gpt-transcribe` con el WAV.
   - `local.rs` — transcripción local con faster-whisper: venv privado + worker
     Python (`resources/fw_server.py`) que mantiene el modelo cargado; se apaga
     si el modelo activo no es local o tras unos minutos sin dictar, y se vuelve

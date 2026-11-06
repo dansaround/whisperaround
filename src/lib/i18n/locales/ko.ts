@@ -352,6 +352,10 @@ const dict: Dict = {
       after: "{n}분 후",
       never: "안 함",
     },
+    liveTyping: {
+      title: "말하는 동안 입력",
+      sub: "말하는 동안 텍스트가 앱에 입력됩니다. 꺼 두면 필에 표시되고 끝날 때 붙여넣어집니다.",
+    },
     python: {
       checking: "Python 확인 중…",
       notFound: "Python 3을 찾을 수 없음",

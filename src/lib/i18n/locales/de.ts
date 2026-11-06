@@ -353,6 +353,10 @@ const dict: Dict = {
       after: "Nach {n} Min.",
       never: "Nie",
     },
+    liveTyping: {
+      title: "Beim Sprechen tippen",
+      sub: "Der Text wird beim Sprechen in die App getippt. Ist die Option aus, erscheint er in der Pill und wird am Ende eingefügt.",
+    },
     python: {
       checking: "Python wird geprüft …",
       notFound: "Python 3 nicht gefunden",

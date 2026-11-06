@@ -351,6 +351,10 @@ const dict: Dict = {
       after: "{n} 分钟后",
       never: "从不",
     },
+    liveTyping: {
+      title: "边说边输入",
+      sub: "说话时文字会直接输入到应用中。关闭时，文字显示在悬浮条中，结束后再粘贴。",
+    },
     python: {
       checking: "正在检查 Python…",
       notFound: "未找到 Python 3",

@@ -37,6 +37,10 @@ export default {
     after: "After {n} min",
     never: "Never",
   },
+  liveTyping: {
+    title: "Type as you speak",
+    sub: "Text is typed into the app as you talk. If off, it shows in the pill and is pasted when you stop.",
+  },
   python: {
     checking: "Checking Python…",
     notFound: "Python 3 not found",

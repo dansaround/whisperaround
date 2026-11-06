@@ -1,23 +1,32 @@
 //! Live dictation over OpenAI's realtime transcription WebSocket
 //! (`gpt-live-transcribe`). While the user records, the audio is streamed in
 //! 100 ms chunks; on stop the server commits the buffer and returns the final
-//! text almost at once. Any failure yields `None`, and the caller falls back to
-//! the file model with the WAV.
+//! text almost at once. Any failure yields no text, and the caller falls back
+//! to the file model with the WAV.
+//!
+//! The server also sends the text as it is transcribed (`...delta` events,
+//! about half a second behind the audio). Each one updates the `live-text`
+//! event for the pill, and with "Type as you speak" it is typed into the app
+//! that had the focus when the recording began.
 
-use std::sync::{Mutex, MutexGuard};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{mpsc as std_mpsc, Arc, Mutex, MutexGuard};
+use std::thread::JoinHandle;
 use std::time::Duration;
 
 use anyhow::{anyhow, bail, Result};
 use base64::{engine::general_purpose::STANDARD, Engine as _};
 use futures_util::{SinkExt, Stream, StreamExt};
+use serde::Serialize;
 use serde_json::{json, Value};
-use tauri::{AppHandle, Manager};
+use tauri::{AppHandle, Emitter, Manager};
 use tokio::sync::{mpsc, oneshot};
 use tokio::time::{interval, timeout};
 use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use tokio_tungstenite::tungstenite::http::HeaderValue;
 use tokio_tungstenite::tungstenite::Message;
 
+use crate::inject;
 use crate::state::AppState;
 use crate::whisper::{self, Options};
 
@@ -44,6 +53,31 @@ struct Session {
     tx: mpsc::UnboundedSender<Msg>,
     /// The task's answer: the text, or `None` if the session failed.
     done: oneshot::Receiver<Option<String>>,
+    /// Everything typed into the app so far (empty when typing is off).
+    typed: Arc<Mutex<String>>,
+    /// Set to stop typing: on cancel, a timeout, or when the focus moved away.
+    stop: Arc<AtomicBool>,
+}
+
+/// What a finished session leaves for the pipeline.
+pub struct LiveResult {
+    /// The final transcript; `None` if the session failed or timed out.
+    pub text: Option<String>,
+    /// What was typed into the app while speaking. Empty when typing was off or
+    /// never started. It can be non-empty even if `text` is `None`: the session
+    /// may fail after typing began, and the fallback text must not be typed again.
+    pub typed: String,
+}
+
+/// Payload of the `live-text` event: the transcript so far, without leading
+/// whitespace. Empty text clears the caption.
+#[derive(Serialize, Clone)]
+struct LiveText {
+    text: String,
+}
+
+fn emit_text(app: &AppHandle, text: &str) {
+    let _ = app.emit("live-text", LiveText { text: text.to_string() });
 }
 
 /// The session of the recording in progress. Only one exists at a time.
@@ -55,40 +89,134 @@ fn slot() -> MutexGuard<'static, Option<Session>> {
 
 /// Start streaming the recording to gpt-live-transcribe. Call right after the
 /// recorder started. A session left over from an earlier recording is dropped.
-pub fn start(app: &AppHandle, api_key: String, opts: Options) {
+/// With `live_typing` the text is typed into the app in front (the one stored
+/// in `recording_app`) as it arrives.
+pub fn start(app: &AppHandle, api_key: String, opts: Options, live_typing: bool) {
+    // Clear any caption left by the previous session.
+    emit_text(app, "");
     let (tx, rx) = mpsc::unbounded_channel();
     let (done_tx, done) = oneshot::channel();
+    let typed = Arc::new(Mutex::new(String::new()));
+    let stop = Arc::new(AtomicBool::new(false));
+    let typer = live_typing.then(|| {
+        let start_app = app.state::<AppState>().recording_app.lock().unwrap().clone();
+        spawn_typer(app, start_app, stop.clone(), typed.clone())
+    });
+    let (fragments, typer_thread) = match typer {
+        Some((tx, handle)) => (Some(tx), Some(handle)),
+        None => (None, None),
+    };
     let app = app.clone();
     tauri::async_runtime::spawn(async move {
-        let result = run(&app, &api_key, &opts, rx).await;
+        let result = run(&app, &api_key, &opts, rx, fragments).await;
         if let Err(e) = &result {
             eprintln!("[whisperaround] live transcription failed: {e:#}");
+        }
+        // `run` dropped its fragment sender: wait until the queued text is typed.
+        if let Some(handle) = typer_thread {
+            let _ = tauri::async_runtime::spawn_blocking(move || handle.join()).await;
         }
         // Nobody waits for the answer after a cancel; the send error is then fine.
         let _ = done_tx.send(result.ok());
     });
-    *slot() = Some(Session { tx, done });
+    *slot() = Some(Session { tx, done, typed, stop });
+}
+
+/// A thread that types the fragments it receives, in order. Typing blocks (and
+/// on macOS hops to the main thread), so it must not run in the socket loop.
+/// It ends when the sender is dropped, after typing what is queued. Before each
+/// fragment it checks that the focus is still in `start_app`; if not, or if
+/// typing fails, it stops for the rest of the session.
+fn spawn_typer(
+    app: &AppHandle,
+    start_app: Option<String>,
+    stop: Arc<AtomicBool>,
+    typed: Arc<Mutex<String>>,
+) -> (std_mpsc::Sender<String>, JoinHandle<()>) {
+    let (tx, rx) = std_mpsc::channel::<String>();
+    let app = app.clone();
+    let handle = std::thread::spawn(move || {
+        for fragment in rx {
+            if stop.load(Ordering::SeqCst) {
+                continue;
+            }
+            if !inject::same_app(&start_app) {
+                stop.store(true, Ordering::SeqCst);
+                continue;
+            }
+            match inject::type_text(&app, &fragment) {
+                Ok(()) => typed.lock().unwrap_or_else(|e| e.into_inner()).push_str(&fragment),
+                Err(e) => {
+                    eprintln!("[whisperaround] typing live text failed: {e:#}");
+                    stop.store(true, Ordering::SeqCst);
+                }
+            }
+        }
+    });
+    (tx, handle)
+}
+
+/// The part of `final_text` still to type after `typed` went into the app, or
+/// `None` if `typed` is not the start of it (the model changed something).
+/// Surrounding whitespace of the final text is ignored; the typed text's end is
+/// not, so a typed trailing space is not typed twice.
+pub fn remaining<'a>(final_text: &'a str, typed: &str) -> Option<&'a str> {
+    final_text.trim().strip_prefix(typed.trim_start())
 }
 
 /// Finish the live session. `all` is the final `Recording::mixed()`: the
 /// session sends the audio after the last streamed frame, commits, and waits
-/// for the text. `None` if there is no session or it failed or timed out; the
-/// caller then uses the file model.
-pub async fn finish(all: &[f32]) -> Option<String> {
+/// for the text. `None` if there was no session. Otherwise the result always
+/// comes back; its `text` is `None` if the session failed or timed out (the
+/// caller then uses the file model) and all typing is finished when it returns.
+pub async fn finish(all: &[f32]) -> Option<LiveResult> {
     let session = slot().take();
-    let Some(Session { tx, done }) = session else {
+    let Some(Session { tx, done, typed, stop }) = session else {
         return None;
     };
     let _ = tx.send(Msg::Finish(all.to_vec()));
-    match timeout(FINISH_TIMEOUT, done).await {
+    let text = match timeout(FINISH_TIMEOUT, done).await {
         Ok(Ok(text)) => text,
-        _ => None,
-    }
+        _ => {
+            // Gave up: keep the typer from adding anything more.
+            stop.store(true, Ordering::SeqCst);
+            None
+        }
+    };
+    let typed = typed.lock().unwrap_or_else(|e| e.into_inner()).clone();
+    Some(LiveResult { text, typed })
 }
 
-/// Drop the session without a result (the recording was cancelled).
-pub fn cancel() {
-    drop(slot().take());
+/// Drop the session without a result (the recording was cancelled) and clear
+/// the caption.
+pub fn cancel(app: &AppHandle) {
+    if let Some(session) = slot().take() {
+        session.stop.store(true, Ordering::SeqCst);
+    }
+    emit_text(app, "");
+}
+
+/// The transcript as the deltas build it up.
+struct Caption<'a> {
+    app: &'a AppHandle,
+    /// All deltas so far; the first has a leading space.
+    text: String,
+    /// Feeds the typer thread; `None` when typing is off.
+    fragments: Option<std_mpsc::Sender<String>>,
+}
+
+impl Caption<'_> {
+    /// Add a delta: update the pill and queue it for typing.
+    fn push(&mut self, delta: &str) {
+        let fragment = if self.text.trim().is_empty() { delta.trim_start() } else { delta };
+        self.text.push_str(delta);
+        emit_text(self.app, self.text.trim_start());
+        if let Some(tx) = &self.fragments {
+            if !fragment.is_empty() {
+                let _ = tx.send(fragment.to_string());
+            }
+        }
+    }
 }
 
 /// One session from connect to the final text. Any error ends it.
@@ -97,7 +225,9 @@ async fn run(
     api_key: &str,
     opts: &Options,
     mut rx: mpsc::UnboundedReceiver<Msg>,
+    fragments: Option<std_mpsc::Sender<String>>,
 ) -> Result<String> {
+    let mut caption = Caption { app, text: String::new(), fragments };
     // Install the TLS crypto provider once; an error only means it is already set.
     let _ = rustls::crypto::ring::default_provider().install_default();
 
@@ -132,8 +262,10 @@ async fn run(
             incoming = stream.next() => {
                 match incoming {
                     Some(Ok(Message::Text(text))) => {
-                        if let Server::Failed(msg) = server_event(text.as_str()) {
-                            bail!("OpenAI: {msg}");
+                        match server_event(text.as_str()) {
+                            Server::Failed(msg) => bail!("OpenAI: {msg}"),
+                            Server::Delta(delta) => caption.push(&delta),
+                            _ => {}
                         }
                     }
                     Some(Ok(_)) => {}
@@ -150,15 +282,16 @@ async fn run(
         sink.send(append(rest)).await?;
     }
     sink.send(Message::text(json!({"type": "input_audio_buffer.commit"}).to_string())).await?;
-    let text = timeout(TRANSCRIPT_TIMEOUT, read_transcript(&mut stream))
+    let text = timeout(TRANSCRIPT_TIMEOUT, read_transcript(&mut stream, &mut caption))
         .await
         .map_err(|_| anyhow!("no transcript from OpenAI"))??;
     let _ = sink.close().await;
     Ok(text)
 }
 
-/// Read server events until the transcript of the commit arrives.
-async fn read_transcript<S>(stream: &mut S) -> Result<String>
+/// Read server events until the transcript of the commit arrives. Deltas that
+/// are still on their way go to the caption.
+async fn read_transcript<S>(stream: &mut S, caption: &mut Caption<'_>) -> Result<String>
 where
     S: Stream<Item = Result<Message, tokio_tungstenite::tungstenite::Error>> + Unpin,
 {
@@ -167,6 +300,7 @@ where
             Some(Ok(Message::Text(text))) => match server_event(text.as_str()) {
                 Server::Completed(transcript) => return Ok(transcript),
                 Server::Failed(msg) => bail!("OpenAI: {msg}"),
+                Server::Delta(delta) => caption.push(&delta),
                 Server::Ignore => {}
             },
             Some(Ok(_)) => {}
@@ -178,6 +312,8 @@ where
 
 /// What a server event means for the session.
 enum Server {
+    /// A fragment of the text, appended to what came before.
+    Delta(String),
     Completed(String),
     Failed(String),
     Ignore,
@@ -189,6 +325,9 @@ fn server_event(text: &str) -> Server {
         return Server::Ignore;
     };
     match event["type"].as_str() {
+        Some("conversation.item.input_audio_transcription.delta") => {
+            Server::Delta(event["delta"].as_str().unwrap_or_default().to_string())
+        }
         Some("conversation.item.input_audio_transcription.completed") => {
             Server::Completed(event["transcript"].as_str().unwrap_or_default().to_string())
         }
@@ -277,6 +416,23 @@ fn session_update(opts: &Options) -> Value {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn remaining_is_the_untyped_suffix() {
+        assert_eq!(remaining("Hello world.", "Hello"), Some(" world."));
+        assert_eq!(remaining(" Hello world. ", "Hello world."), Some(""));
+        assert_eq!(remaining("Hello world", "Hello "), Some("world"));
+        assert_eq!(remaining("Hello world", ""), Some("Hello world"));
+        assert_eq!(remaining("Hola mundo", "Hello"), None);
+        assert_eq!(remaining("Hello", "Hello world"), None);
+    }
+
+    #[test]
+    fn delta_events_carry_their_fragment() {
+        let event = r#"{"type":"conversation.item.input_audio_transcription.delta","item_id":"i","delta":" Hello"}"#;
+        assert!(matches!(server_event(event), Server::Delta(d) if d == " Hello"));
+        assert!(matches!(server_event(r#"{"type":"session.created"}"#), Server::Ignore));
+    }
 
     #[test]
     fn pcm_is_24k_mono_pcm16() {

@@ -81,6 +81,8 @@ export interface SettingsView {
   /** Save the raw and processed meeting audio as WAV next to the transcript. */
   meetingAudioDump: boolean;
   autoPaste: boolean;
+  /** Type the live transcript into the focused app while speaking (gpt-live-transcribe). */
+  liveTyping: boolean;
   theme: Theme;
   pillStyle: PillStyle;
   pillAlwaysShow: boolean;

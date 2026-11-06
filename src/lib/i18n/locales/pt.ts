@@ -353,6 +353,10 @@ const dict: Dict = {
       after: "Após {n} min",
       never: "Nunca",
     },
+    liveTyping: {
+      title: "Digitar enquanto fala",
+      sub: "O texto é digitado no app enquanto você fala. Desligado, ele aparece no pill e é colado ao terminar.",
+    },
     python: {
       checking: "Verificando o Python…",
       notFound: "Python 3 não encontrado",
