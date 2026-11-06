@@ -481,6 +481,7 @@ pub fn start(app: &AppHandle) {
     };
     // Reload a local model unloaded for being idle while the meeting starts.
     local::prewarm(app, &model);
+    crate::window::restore_pill(app);
 
     let job = Job {
         local: local::model_name(&model).map(String::from),

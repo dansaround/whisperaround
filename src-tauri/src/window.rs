@@ -20,7 +20,9 @@ const EDGE_MARGIN: f64 = 12.0;
 /// position setting changes and when revealing the pill from the tray.
 pub fn layout_main(window: &WebviewWindow, size: (f64, f64), bottom: bool) {
     let _ = window.set_size(LogicalSize::new(size.0, size.1));
-    let Ok(Some(monitor)) = window.current_monitor() else {
+    // Off every monitor (the one it was on was unplugged): use the primary.
+    let monitor = window.current_monitor().ok().flatten().or_else(|| window.primary_monitor().ok().flatten());
+    let Some(monitor) = monitor else {
         return;
     };
     let scale = monitor.scale_factor();
@@ -95,6 +97,57 @@ fn set_bounds(window: &WebviewWindow, x: i32, y: i32, w: i32, h: i32) {
     let _ = window.set_size(tauri::PhysicalSize::new(w as u32, h as u32));
     let _ = window.set_position(PhysicalPosition::new(x, y));
 }
+
+/// Bring the pill back when Windows lost it while shortcuts keep working:
+/// "Show desktop" (Win+D) or a full-screen app can leave the always-on-top
+/// window minimized or below other windows, and unplugging the monitor it sat
+/// on can leave it off-screen. Called when a recording starts. Never activates
+/// the window, so the app that gets the paste keeps the focus.
+#[cfg(windows)]
+pub fn restore_pill(app: &tauri::AppHandle) {
+    use tauri::Manager;
+    use windows::Win32::Foundation::HWND;
+    use windows::Win32::UI::WindowsAndMessaging::{
+        IsIconic, SetWindowPos, ShowWindow, HWND_TOPMOST, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE,
+        SWP_SHOWWINDOW, SW_SHOWNOACTIVATE,
+    };
+    let (hidden, bottom) = {
+        let state = app.state::<crate::state::AppState>();
+        let s = state.settings.lock().unwrap();
+        (s.pill_style == "none", s.pill_position == "bottom")
+    };
+    let Some(window) = app.get_webview_window("main") else {
+        return;
+    };
+    if hidden {
+        return;
+    }
+    let Ok(raw) = window.hwnd() else {
+        return;
+    };
+    let hwnd = HWND(raw.0);
+    // SAFETY: `hwnd` is the live native handle of this Tauri window.
+    unsafe {
+        if IsIconic(hwnd).as_bool() {
+            let _ = ShowWindow(hwnd, SW_SHOWNOACTIVATE);
+        }
+    }
+    if !matches!(window.current_monitor(), Ok(Some(_))) {
+        let size = window
+            .inner_size()
+            .ok()
+            .zip(window.scale_factor().ok())
+            .map(|(s, f)| (s.width as f64 / f, s.height as f64 / f))
+            .unwrap_or(PILL_SIZE);
+        layout_main(&window, size, bottom);
+    }
+    let flags = SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW;
+    // SAFETY: as above. Re-inserting at HWND_TOPMOST puts it back on top.
+    let _ = unsafe { SetWindowPos(hwnd, Some(HWND_TOPMOST), 0, 0, 0, 0, flags) };
+}
+
+#[cfg(not(windows))]
+pub fn restore_pill(_app: &tauri::AppHandle) {}
 
 /// Whether the user put the pill at the bottom of the screen.
 pub fn pill_at_bottom(app: &tauri::AppHandle) -> bool {
