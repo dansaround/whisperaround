@@ -5,9 +5,8 @@ const dict: Dict = {
   common: {
     autoDetect: "自动检测",
     modelDesc: {
-      "gpt-4o-mini-transcribe": "快速且实惠，全天听写的最佳平衡之选。",
-      "gpt-4o-transcribe": "OpenAI 最准确的模型，擅长处理术语、人名和口音。",
-      "whisper-1": "经典的云端 Whisper，稳定可靠。",
+      "gpt-transcribe": "OpenAI 当前的转写模型，对人名和术语很准确，并会把你的词汇表用作关键词。",
+      "gpt-live-transcribe": "边说边实时转写，说完即可立即得到文字。费用约为前者的 4 倍。",
       "local:small": "在你的电脑上运行，无需联网，无需 API 密钥。轻巧快速。",
       "local:medium": "本地运行、保护隐私，准确度更高，但占用更多内存。",
       "local:turbo": "Whisper large-v3 turbo，经 Apple 芯片加速。顶级准确度，完全离线。",

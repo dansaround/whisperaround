@@ -137,6 +137,7 @@ fn stop_and_transcribe(app: &AppHandle) {
     let opts = whisper::Options {
         language: settings.effective_language().to_string(),
         prompt: settings.vocabulary_prompt(),
+        keywords: settings.vocabulary_keywords(),
     };
     let app = app.clone();
 

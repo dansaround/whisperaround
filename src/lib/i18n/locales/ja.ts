@@ -5,9 +5,8 @@ const dict: Dict = {
   common: {
     autoDetect: "自動検出",
     modelDesc: {
-      "gpt-4o-mini-transcribe": "高速で手頃な価格。一日中の音声入力に最適なバランスです。",
-      "gpt-4o-transcribe": "OpenAIで最も高精度なモデル。専門用語や人名、アクセントにも強いです。",
-      "whisper-1": "クラウドで動く定番のWhisper。堅牢で安定しています。",
+      "gpt-transcribe": "OpenAIの現在の文字起こしモデル。人名や専門用語に強く、語彙リストをキーワードとして使います。",
+      "gpt-live-transcribe": "話している間に音声を順次文字起こしするので、話し終えた時点で文章がすぐに揃います。料金は約4倍です。",
       "local:small": "このコンピュータ上で動作。インターネットもAPIキーも不要で、軽量かつ高速です。",
       "local:medium": "ローカルでプライベート。メモリ使用量は増えますが、より高精度です。",
       "local:turbo": "Appleシリコンで高速化されたWhisper large-v3 turbo。最高の精度で、完全にオフラインで動作します。",

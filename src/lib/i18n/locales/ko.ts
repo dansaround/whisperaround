@@ -5,9 +5,8 @@ const dict: Dict = {
   common: {
     autoDetect: "자동 감지",
     modelDesc: {
-      "gpt-4o-mini-transcribe": "빠르고 저렴합니다. 하루 종일 받아쓰기에 가장 균형 잡힌 선택입니다.",
-      "gpt-4o-transcribe": "OpenAI의 가장 정확한 모델로, 전문 용어, 이름, 억양도 잘 인식합니다.",
-      "whisper-1": "클라우드에서 실행되는 클래식 Whisper. 안정적이고 예측 가능합니다.",
+      "gpt-transcribe": "OpenAI의 현재 음성 인식 모델입니다. 이름과 전문 용어를 정확히 인식하며, 사용자 사전을 키워드로 활용합니다.",
+      "gpt-live-transcribe": "말하는 동안 음성을 실시간으로 변환하므로, 말을 마치는 순간 텍스트가 바로 준비됩니다. 비용은 약 4배입니다.",
       "local:small": "컴퓨터에서 직접 실행되며 인터넷도, API 키도 필요 없습니다. 가볍고 빠릅니다.",
       "local:medium": "로컬에서 비공개로 실행됩니다. 메모리를 더 사용하는 대신 더 정확합니다.",
       "local:turbo": "Apple 실리콘에서 가속되는 Whisper large-v3 turbo. 최고의 정확도, 완전한 오프라인.",

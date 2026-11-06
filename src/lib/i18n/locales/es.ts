@@ -5,9 +5,8 @@ const dict: Dict = {
   common: {
     autoDetect: "Detección automática",
     modelDesc: {
-      "gpt-4o-mini-transcribe": "Rápido y económico. El mejor equilibrio para dictar todo el día.",
-      "gpt-4o-transcribe": "El modelo más preciso de OpenAI: ideal para jerga, nombres y acentos.",
-      "whisper-1": "El Whisper clásico en la nube. Robusto y predecible.",
+      "gpt-transcribe": "El modelo de transcripción actual de OpenAI. Preciso con nombres y jerga, y usa tu vocabulario como palabras clave.",
+      "gpt-live-transcribe": "Transcribe tu voz mientras hablas, así el texto está listo en cuanto terminas. Cuesta unas 4 veces más.",
       "local:small": "Funciona en tu equipo, sin internet ni clave de API. Ligero y rápido.",
       "local:medium": "Local y privado, más preciso a cambio de usar más memoria.",
       "local:turbo": "Whisper large-v3 turbo, acelerado en Apple silicon. Máxima precisión, totalmente sin conexión.",

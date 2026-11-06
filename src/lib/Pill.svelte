@@ -36,7 +36,7 @@
   let errorUnknown = $state(false);
   let shortcut = $state("CmdOrCtrl+Shift+X");
   let cancelShortcut = $state("Escape");
-  let model = $state("gpt-4o-mini-transcribe");
+  let model = $state("gpt-transcribe");
   let pillStyle = $state<PillStyle>("mini");
   let alwaysShow = $state(true);
   let position = $state<PillPosition>("top");

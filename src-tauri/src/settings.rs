@@ -137,7 +137,7 @@ pub struct Settings {
 }
 
 fn default_model() -> String {
-    "gpt-4o-mini-transcribe".into()
+    crate::whisper::DEFAULT_MODEL.into()
 }
 fn default_shortcut() -> String {
     "CmdOrCtrl+Shift+X".into()
@@ -319,6 +319,15 @@ impl Settings {
         if !self.modes.iter().any(|m| m.id == self.active_mode) {
             self.active_mode = self.modes[0].id.clone();
         }
+        // OpenAI shuts the older cloud models down on 2027-02-26, so saved modes move to the default.
+        if crate::whisper::DEPRECATED.contains(&self.model.as_str()) {
+            self.model = crate::whisper::DEFAULT_MODEL.into();
+        }
+        for mode in &mut self.modes {
+            if crate::whisper::DEPRECATED.contains(&mode.model.as_str()) {
+                mode.model = crate::whisper::DEFAULT_MODEL.into();
+            }
+        }
         self.sound_volume = self.sound_volume.clamp(0.0, 1.0);
         if !crate::sounds::START_SOUNDS.contains(&self.start_sound.as_str()) {
             self.start_sound = default_start_sound();
@@ -386,6 +395,11 @@ impl Settings {
         } else {
             Some(self.vocabulary.join(", "))
         }
+    }
+
+    /// Vocabulary terms sent to gpt-transcribe as `keywords[]`.
+    pub fn vocabulary_keywords(&self) -> Vec<String> {
+        self.vocabulary.clone()
     }
 
     /// Apply a partial update. Validates enums and mode lists; an empty key
@@ -697,6 +711,7 @@ mod tests {
         // A 0.1.x file without the newer fields.
         let mut s: Settings =
             serde_json::from_str(r#"{"openai_api_key":"sk-x","model":"whisper-1"}"#).unwrap();
+        // The retired model is migrated, so the first mode gets the default.
         s.normalize();
         assert_eq!(s.shortcut, default_shortcut());
         assert!(s.auto_paste);
@@ -709,8 +724,19 @@ mod tests {
         assert_eq!(s.ui_language, "en");
         assert_eq!(s.local_device, "auto");
         assert_eq!(s.local_unload_minutes, 5);
-        assert_eq!(s.effective_model(), "whisper-1");
+        assert_eq!(s.effective_model(), "gpt-transcribe");
         assert_eq!(s.active_mode, "default");
+    }
+
+    #[test]
+    fn deprecated_models_are_migrated() {
+        let mut s: Settings = serde_json::from_str(
+            r#"{"modes":[{"id":"a","name":"A","model":"gpt-4o-transcribe"},{"id":"local","name":"Local","model":"local:small"}]}"#,
+        )
+        .unwrap();
+        s.normalize();
+        assert_eq!(s.modes[0].model, "gpt-transcribe");
+        assert_eq!(s.modes[1].model, "local:small");
     }
 
     #[test]
@@ -752,12 +778,12 @@ mod tests {
     #[test]
     fn set_model_edits_the_active_mode_and_cycle_wraps() {
         let mut s = Settings::default();
-        s.set_model("whisper-1".into());
-        assert_eq!(s.modes[0].model, "whisper-1");
+        s.set_model("gpt-transcribe".into());
+        assert_eq!(s.modes[0].model, "gpt-transcribe");
         assert_eq!(s.cycle_mode(), "Local");
         assert_eq!(s.effective_model(), "local:small");
         assert_eq!(s.cycle_mode(), "Default");
-        assert_eq!(s.effective_model(), "whisper-1");
+        assert_eq!(s.effective_model(), "gpt-transcribe");
     }
 
     #[test]

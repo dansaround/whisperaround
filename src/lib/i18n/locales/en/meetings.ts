@@ -6,7 +6,7 @@ export default {
   finishing: "Finishing…",
   idle: "Not recording",
   recording: "Recording a meeting",
-  /** {model} is a model name, e.g. "gpt-4o-mini-transcribe". */
+  /** {model} is a model name, e.g. "gpt-transcribe". */
   model: "Model: {model}",
   /** Windows, input is not "Microphone + system audio". */
   hintSuggestMix: "Only your microphone is recorded. To capture both sides of a call and label who spoke, choose “Microphone + system audio” as the source below.",

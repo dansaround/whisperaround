@@ -293,8 +293,13 @@ evitar el toolchain cruzado bajo WSL2.
 ### Notas
 
 - Modelo configurable en Ajustes o en el dropdown de la píldora:
-  - OpenAI (nube): `whisper-1`, `gpt-4o-transcribe`, `gpt-4o-mini-transcribe`
-    (por defecto).
+  - OpenAI (nube):
+    - `gpt-transcribe` (por defecto, $0,0045/min).
+    - `gpt-live-transcribe` (en vivo por WebSocket, $0,017/min; si falla vuelve a
+      `gpt-transcribe`).
+    - `whisper-1`, `gpt-4o-transcribe` y `gpt-4o-mini-transcribe` se quitaron
+      porque OpenAI los da de baja el 2027-02-26. Los ajustes guardados con
+      ellos pasan solos a `gpt-transcribe`.
   - Local (sin API key, el audio no sale del equipo): `faster-whisper small` y
     `faster-whisper medium` (CPU, int8). Requiere Python 3 instalado: la primera
     vez la app crea un venv en su carpeta de datos local

@@ -92,7 +92,7 @@ Keep each term the same everywhere in the app (frontend and backend).
 | **dictate / dictation** | Speaking text for the app to type. Use the word Apple uses for macOS Dictation in your language (*dictar*, *ditar*, *dicter*, *diktieren*, *dettare*, *音声入力* or *口述*, *받아쓰기*, *听写*). |
 | **transcript** | The text produced from one recording. It's a noun. Entries in History are transcripts. |
 | **transcription** / **transcribe** | The process of turning audio into text. `Transcribing…` is the status shown while waiting. |
-| **voice model** / **model** | A speech-recognition model such as `gpt-4o-transcribe` or `faster-whisper small`. Translate "model" and keep the model ids. |
+| **voice model** / **model** | A speech-recognition model such as `gpt-transcribe` or `faster-whisper small`. Translate "model" and keep the model ids. |
 | **local** (model) | Runs on this Mac, offline. Translate it as "local" or "on-device". It's a heading and a badge, so keep it to one short word. |
 | **cloud** (model) | Runs on OpenAI's servers over the internet. |
 | **API key** | An OpenAI secret key. Keep the term "API key" in its common localized form (es *clave de API*, pt-BR *chave de API*, fr *clé API*, de *API-Schlüssel*, it *chiave API*, ja *APIキー*, ko *API 키*, zh *API 密钥*). |
@@ -112,8 +112,8 @@ Keep each term the same everywhere in the app (frontend and backend).
 - The brand **WhisperAround**, and **OpenAI**, **Whisper**, **faster-whisper**,
   **mlx-whisper**, **MLX**, **Python**, **python.org**, **Microsoft Store**,
   **Apple** and **Homebrew**.
-- Model ids and labels: `gpt-4o-mini-transcribe`, `gpt-4o-transcribe`,
-  `whisper-1`, `faster-whisper small/medium`, `whisper large-v3 turbo`.
+- Model ids and labels: `gpt-transcribe`, `gpt-live-transcribe`,
+  `faster-whisper small/medium`, `whisper large-v3 turbo`.
 - Sound names **Orus**, **Loto**, **Okaso**, and the pill skin **Onyx**. (Their
   descriptions *are* translated.)
 - Keyboard glyphs and key names: `⌘ ⌥ ⇧ ⌃ ⌫ esc Esc ⌘V Ctrl+V ⌥⇧K`.
