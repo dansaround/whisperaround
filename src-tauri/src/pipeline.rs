@@ -9,7 +9,7 @@ use crate::history::{self, Entry};
 use crate::i18n::{t, tf};
 use crate::sounds::{self, Sound};
 use crate::state::{set_status, AppState, AppStatus};
-use crate::{inject, local, recorder, whisper};
+use crate::{inject, live, local, recorder, whisper};
 
 /// Translation key for "the microphone picked up nothing".
 #[cfg(target_os = "macos")]
@@ -51,9 +51,18 @@ fn start(app: &AppHandle) {
     }
     // Plays while the mic opens; short enough not to matter to Whisper.
     sounds::play(app, Sound::Start);
-    let (device, model) = {
+    let (device, model, api_key, opts) = {
         let settings = state.settings.lock().unwrap();
-        (settings.input_device.clone(), settings.effective_model().to_string())
+        (
+            settings.input_device.clone(),
+            settings.effective_model().to_string(),
+            settings.openai_api_key.clone(),
+            whisper::Options {
+                language: settings.effective_language().to_string(),
+                prompt: None,
+                keywords: settings.vocabulary_keywords(),
+            },
+        )
     };
     // Live input level for the pill's waveform (`level` event, 0.0..=1.0).
     let level_app = app.clone();
@@ -67,6 +76,10 @@ fn start(app: &AppHandle) {
             set_status(app, AppStatus::Recording, None);
             // Reload a local model unloaded for being idle while the user speaks.
             local::prewarm(app, &model);
+            // Without a key the file path reports the missing key, so don't stream.
+            if model == whisper::LIVE_MODEL && !api_key.trim().is_empty() {
+                live::start(app, api_key, opts);
+            }
         }
         Err(e) => {
             let key = if matches!(source, recorder::Source::Mic(_)) {
@@ -81,6 +94,7 @@ fn start(app: &AppHandle) {
 
 /// Discard the current recording without transcribing it.
 pub fn cancel(app: &AppHandle) {
+    live::cancel();
     let state = app.state::<AppState>();
     let Some(rec) = state.recorder.lock().unwrap().take() else {
         return;
@@ -104,6 +118,7 @@ fn stop_and_transcribe(app: &AppHandle) {
     let recording = match rec.stop() {
         Ok(r) => r,
         Err(e) => {
+            live::cancel();
             set_status(app, AppStatus::Error, Some(tf("error.recording.failed", &[("error", &e)])));
             return;
         }
@@ -118,13 +133,16 @@ fn stop_and_transcribe(app: &AppHandle) {
         recorder::Source::Mix(_) => (recording.is_digital_silence(), SILENT_MIC),
     };
     if silent {
+        live::cancel();
         set_status(app, AppStatus::Error, Some(t(message)));
         return;
     }
 
-    let wav = match recorder::encode_wav(&recording.mixed()) {
+    let mixed = recording.mixed();
+    let wav = match recorder::encode_wav(&mixed) {
         Ok(w) => w,
         Err(e) => {
+            live::cancel();
             set_status(app, AppStatus::Error, Some(tf("error.recording.encode", &[("error", &e)])));
             return;
         }
@@ -152,7 +170,18 @@ fn stop_and_transcribe(app: &AppHandle) {
                 .await
                 .unwrap_or_else(|e| Err(anyhow::anyhow!(tf("error.local.failed", &[("error", &e)]))))
             }
-            None => whisper::transcribe(&settings.openai_api_key, &model, wav, &opts).await,
+            None => {
+                // The live session already has the audio; the WAV is only the fallback.
+                let live_text = if model == whisper::LIVE_MODEL {
+                    live::finish(&mixed).await
+                } else {
+                    None
+                };
+                match live_text {
+                    Some(text) => Ok(text),
+                    None => whisper::transcribe(&settings.openai_api_key, &model, wav, &opts).await,
+                }
+            }
         };
         match result {
             Ok(text) => {

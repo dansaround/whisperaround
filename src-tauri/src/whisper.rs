@@ -32,7 +32,7 @@ struct TranscriptionResponse {
 
 /// Whether a vocabulary term can be sent as a `keywords[]` field. The API rejects the whole
 /// request if a term contains `<`, `>` or a line break, so such terms are dropped.
-fn valid_keyword(k: &str) -> bool {
+pub(crate) fn valid_keyword(k: &str) -> bool {
     !k.trim().is_empty() && !k.contains(['<', '>', '\r', '\n'])
 }
 

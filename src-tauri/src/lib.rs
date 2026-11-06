@@ -6,6 +6,7 @@ mod echo;
 mod history;
 mod i18n;
 mod inject;
+mod live;
 mod local;
 #[cfg(target_os = "macos")]
 mod macos;

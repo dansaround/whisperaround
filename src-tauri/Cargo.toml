@@ -44,6 +44,13 @@ tauri-plugin-dialog = "2"
 chrono = { version = "0.4", default-features = false, features = ["clock"] }
 # FFT for the echo suppression of meetings (pure Rust).
 realfft = "3"
+# WebSocket client for gpt-live-transcribe (rustls, like reqwest).
+tokio-tungstenite = { version = "0.26", default-features = false, features = ["connect", "rustls-tls-webpki-roots"] }
+futures-util = { version = "0.3", default-features = false, features = ["sink", "std"] }
+base64 = "0.22"
+rustls = { version = "0.23", default-features = false, features = ["ring", "std"] }
+# Timers, channels and select! for the live WebSocket session.
+tokio = { version = "1", features = ["macros", "sync", "time"] }
 
 [target.'cfg(windows)'.dependencies]
 keyring = { version = "3", default-features = false, features = ["windows-native"] }
