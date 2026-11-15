@@ -12,4 +12,11 @@ export default {
   },
   footnote:
     "Terms are sent as a spelling hint with cloud transcriptions and, when it's on, with the AI cleanup; local models alone ignore them. Keep the list focused — a few dozen terms work best.",
+  soon: {
+    badge: "Coming soon",
+    title: "Paused for now",
+    body: "Saved terms were being inserted into transcripts that didn’t contain them, especially with local models. Your list stays on this computer; nothing is sent to any model until this comes back.",
+    kept: "Your terms are kept",
+    footnote: "We’ll bring vocabulary back once it only affects the words you actually say.",
+  },
 } as const;

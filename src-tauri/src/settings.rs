@@ -400,8 +400,11 @@ impl Settings {
     }
 
     /// Vocabulary terms sent to gpt-transcribe as `keywords[]`.
+    ///
+    /// Empty while vocabulary is paused (Coming soon): sending the list as a
+    /// Whisper prompt made local models echo it into silence and real speech.
     pub fn vocabulary_keywords(&self) -> Vec<String> {
-        self.vocabulary.clone()
+        Vec::new()
     }
 
     /// Apply a partial update. Validates enums and mode lists; an empty key
@@ -828,7 +831,9 @@ mod tests {
             ..Default::default()
         })
         .unwrap();
-        assert_eq!(s.vocabulary_keywords(), ["Tauri", "Svelte"]);
+        assert_eq!(s.vocabulary, ["Tauri", "Svelte"]);
+        // Coming soon: stored, but not sent to any model.
+        assert!(s.vocabulary_keywords().is_empty());
     }
 
     #[test]

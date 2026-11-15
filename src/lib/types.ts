@@ -147,11 +147,33 @@ export interface MeetingView {
   segments: MeetingSegment[];
 }
 
+/** Estimated OpenAI spend, in millionths of a USD. */
+export interface CostStats {
+  usdMicros: number;
+  transcribeUsdMicros: number;
+  cleanupUsdMicros: number;
+  day: string;
+  dayUsdMicros: number;
+  month: string;
+  monthUsdMicros: number;
+}
+
+export const EMPTY_COST: CostStats = {
+  usdMicros: 0,
+  transcribeUsdMicros: 0,
+  cleanupUsdMicros: 0,
+  day: "",
+  dayUsdMicros: 0,
+  month: "",
+  monthUsdMicros: 0,
+};
+
 export interface HistoryStats {
   words: number;
   audioMs: number;
   sessions: number;
   apps: string[];
+  cost: CostStats;
 }
 
 export interface History {

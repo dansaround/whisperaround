@@ -186,9 +186,16 @@ fn stop_and_transcribe(app: &AppHandle) {
                 match live.and_then(|l| l.text) {
                     Some(text) => {
                         from_live = true;
+                        history::add_cost(&app, crate::cost::live(duration_ms));
                         Ok(text)
                     }
-                    None => whisper::transcribe(&settings.openai_api_key, &model, wav, &opts).await,
+                    None => {
+                        let result = whisper::transcribe(&settings.openai_api_key, &model, wav, &opts).await;
+                        if result.is_ok() {
+                            history::add_cost(&app, crate::cost::transcribe(duration_ms));
+                        }
+                        result
+                    }
                 }
             }
         };
@@ -206,9 +213,15 @@ fn stop_and_transcribe(app: &AppHandle) {
                     && !settings.openai_api_key.trim().is_empty()
                     && cleanup::worth_cleaning(&text)
                 {
-                    let cleaned = cleanup::clean(&settings.openai_api_key, &text, &settings.vocabulary).await;
+                    let cleaned = cleanup::clean(&settings.openai_api_key, &text, &[]).await;
                     match cleaned {
-                        Ok(cleaned) => cleaned,
+                        Ok(cleaned) => {
+                            history::add_cost(
+                                &app,
+                                crate::cost::luna(cleaned.usage.input, cleaned.usage.cached, cleaned.usage.output),
+                            );
+                            cleaned.text
+                        }
                         Err(e) => {
                             // Never lose the dictation: paste it as transcribed.
                             let _ = app.emit("notice", tf("notice.cleanupFailed", &[("error", &e)]));

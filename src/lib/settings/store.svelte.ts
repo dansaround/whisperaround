@@ -21,7 +21,7 @@ import {
 import { local } from "../localModels.svelte";
 import { applyTheme } from "../theme";
 import { setLocale } from "../i18n/index.svelte";
-import type { History, InputDevice, MeetingView, Permissions, SettingsPatch, SettingsView } from "../types";
+import { EMPTY_COST, type History, type InputDevice, type MeetingView, type Permissions, type SettingsPatch, type SettingsView } from "../types";
 
 export type Page = "home" | "modes" | "vocabulary" | "configuration" | "sound" | "models" | "history" | "meetings";
 
@@ -33,7 +33,7 @@ export interface Toast {
 
 class SettingsStore {
   view = $state<SettingsView | null>(null);
-  history = $state<History>({ entries: [], stats: { words: 0, audioMs: 0, sessions: 0, apps: [] } });
+  history = $state<History>({ entries: [], stats: { words: 0, audioMs: 0, sessions: 0, apps: [], cost: { ...EMPTY_COST } } });
   devices = $state<InputDevice[]>([]);
   perms = $state<Permissions | null>(null);
   version = $state("");

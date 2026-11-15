@@ -9,7 +9,8 @@
   import Toggle from "../ui/Toggle.svelte";
   import { cancelModelDownload, checkPython, downloadModel, gpuInfo, openPythonInstall, setModel, IS_MAC, IS_WINDOWS, DOWNLOAD_CANCELLED } from "../../ipc";
   import type { GpuInfo, LocalDevice } from "../../types";
-  import { t, type Key } from "../../i18n/index.svelte";
+  import { t, intlLocale, type Key } from "../../i18n/index.svelte";
+  import { EMPTY_COST } from "../../types";
 
   const v = $derived(store.view!);
   const activeMode = $derived(v.modes.find((m) => m.id === v.activeMode));
@@ -76,6 +77,19 @@
     { title: "models.groups.cloud", sub: "models.groups.cloudSub", local: false },
     { title: "models.groups.local", sub: "models.groups.localSub", local: true },
   ];
+
+  const cost = $derived(store.history.stats.cost ?? EMPTY_COST);
+
+  function formatUsd(micros: number): string {
+    const n = micros / 1_000_000;
+    const digits = n > 0 && n < 0.01 ? 4 : 2;
+    return new Intl.NumberFormat(intlLocale(), {
+      style: "currency",
+      currency: "USD",
+      minimumFractionDigits: digits,
+      maximumFractionDigits: digits,
+    }).format(n);
+  }
 </script>
 
 <div class="page">
@@ -117,6 +131,31 @@
             onchange={(dictationCleanup) => store.patch({ dictationCleanup })}
           />
         </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="row tall">
+        <div class="row-text">
+          <strong>{t("models.cost.title")}</strong>
+          <small>{t("models.cost.sub")}</small>
+        </div>
+        <div class="cost-figure">
+          <strong>{formatUsd(cost.monthUsdMicros)}</strong>
+          <span>{t("models.cost.month")}</span>
+        </div>
+      </div>
+      <div class="cost-break">
+        {#if cost.usdMicros === 0}
+          {t("models.cost.none")}
+        {:else}
+          <span>{t("models.cost.today")} {formatUsd(cost.dayUsdMicros)}</span>
+          <span class="dot">·</span>
+          <span>{t("models.cost.allTime")} {formatUsd(cost.usdMicros)}</span>
+          <span class="dot">·</span>
+          <span>{t("models.cost.transcription")} {formatUsd(cost.transcribeUsdMicros)}</span>
+          <span class="dot">·</span>
+          <span>{t("models.cost.cleanup")} {formatUsd(cost.cleanupUsdMicros)}</span>
+        {/if}
       </div>
     </div>
     {#if v.model === "gpt-live-transcribe"}
@@ -249,6 +288,37 @@
     transition:
       border-color 0.2s var(--ease),
       box-shadow 0.2s var(--ease);
+  }
+  .cost-figure {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 1px;
+    flex: none;
+    font-variant-numeric: tabular-nums;
+  }
+  .cost-figure strong {
+    font-size: 15px;
+    font-weight: 650;
+  }
+  .cost-figure span {
+    font-size: 11px;
+    color: var(--text-2);
+  }
+  .cost-break {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 0;
+    padding: 10px 16px 14px;
+    margin-top: 0;
+    border-top: 1px solid var(--line);
+    font-size: 11.5px;
+    color: var(--text-2);
+    font-variant-numeric: tabular-nums;
+  }
+  .cost-break .dot {
+    margin: 0 7px;
+    color: var(--text-3);
   }
   .key-input:focus-within {
     border-color: var(--accent);
@@ -401,6 +471,13 @@
     }
     to {
       left: 100%;
+    }
+  }
+  /* A progress indicator: keep it moving (app.css cuts other animations). */
+  @media (prefers-reduced-motion: reduce) {
+    .bar.indeterminate i {
+      animation-duration: 1.2s !important;
+      animation-iteration-count: infinite !important;
     }
   }
   .download-meta {

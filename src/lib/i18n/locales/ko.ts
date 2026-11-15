@@ -5,7 +5,7 @@ const dict: Dict = {
   common: {
     autoDetect: "자동 감지",
     modelDesc: {
-      "gpt-transcribe": "OpenAI의 현재 음성 인식 모델입니다. 이름과 전문 용어를 정확히 인식하며, 사용자 사전을 키워드로 활용합니다.",
+      "gpt-transcribe": "OpenAI의 현재 음성 인식 모델입니다. 이름과 전문 용어를 정확히 인식합니다.",
       "gpt-live-transcribe": "말하는 동안 음성을 실시간으로 변환하므로, 말을 마치는 순간 텍스트가 바로 준비됩니다. 비용은 약 4배입니다.",
       "local:small": "컴퓨터에서 직접 실행되며 인터넷도, API 키도 필요 없습니다. 가볍고 빠릅니다.",
       "local:medium": "로컬에서 비공개로 실행됩니다. 메모리를 더 사용하는 대신 더 정확합니다.",
@@ -95,6 +95,7 @@ const dict: Dict = {
       home: "홈",
       modes: "모드",
       vocabulary: "어휘",
+      soon: "곧",
       configuration: "구성",
       sound: "사운드",
       models: "모델 라이브러리",
@@ -154,13 +155,13 @@ const dict: Dict = {
     whatsNew: "새로운 기능",
     viewAllChanges: "모든 변경 사항 보기",
     changes: {
-      settingsWindow: {
-        title: "완전히 새로워진 설정 윈도우",
-        body: "사이드바 탐색, 테마, 사용자화할 수 있는 캡슐, 단일 키 및 눌러서 말하기 단축키, 미래적인 사운드 팩.",
+      cleanup: {
+        title: "AI로 받아쓰기 다듬기",
+        body: "말을 멈춘 뒤의 선택 단계입니다. 군말을 지우고, 마지막 말 바꿈을 남기며, 말로 나열한 항목을 목록으로 씁니다. OpenAI 키가 필요하며 기본값은 꺼짐입니다.",
       },
-      modesVocabulary: {
-        title: "모드 및 어휘",
-        body: "{keys}로 모델과 언어 사전 설정을 전환하고, 자주 쓰는 이름을 Whisper에 알려 주세요.",
+      usage: {
+        title: "OpenAI 사용량 측정",
+        body: "설정 › 모델 라이브러리에 API 예상 비용이 표시됩니다. 어휘는 곧 제공으로 멈춰 두어 받아쓰기에 섞여 들어가지 않게 했습니다.",
       },
     },
   },
@@ -209,6 +210,13 @@ const dict: Dict = {
     },
     footnote:
       "용어는 클라우드 텍스트 변환 시 철자 힌트로 전송되고, 켜져 있으면 AI 다듬기에도 전송됩니다(로컬 모델만으로는 사용하지 않음). 목록은 핵심만 유지하세요. 수십 개 정도가 가장 효과적입니다.",
+    soon: {
+      badge: "곧 제공",
+      title: "지금은 멈춰 있습니다",
+      body: "저장한 용어가 들어 있지 않은 받아쓰기에도 섞여 들어갔습니다. 특히 로컬 모델에서요. 목록은 이 컴퓨터에 그대로 두고, 다시 켤 때까지 어떤 모델에도 보내지 않습니다.",
+      kept: "용어는 보관됩니다",
+      footnote: "실제로 말한 단어에만 영향을 줄 수 있을 때 어휘를 다시 켭니다.",
+    },
   },
   configuration: {
     appearance: {
@@ -358,8 +366,18 @@ const dict: Dict = {
     },
     cleanup: {
       title: "AI로 받아쓰기 다듬기",
-      sub: "군말과 말 바꿈을 지우고, 문장 부호를 고치고, 말로 나열한 항목을 목록으로 만듭니다. 켜 두면 받아쓴 텍스트와 어휘가 OpenAI로 전송되며, 로컬 모델을 쓸 때도 마찬가지입니다. 2~3초가 더 걸립니다.",
+      sub: "군말과 말 바꿈을 지우고, 문장 부호를 고치고, 말로 나열한 항목을 목록으로 만듭니다. 켜 두면 받아쓴 텍스트가 OpenAI로 전송되며, 로컬 모델을 쓸 때도 마찬가지입니다. 2~3초가 더 걸립니다.",
       needsKey: "OpenAI API 키가 필요합니다. 위에서 키를 추가하면 켤 수 있습니다.",
+    },
+    cost: {
+      title: "API 사용량",
+      sub: "OpenAI 공개 요금 기준 추정치입니다. 로컬 모델은 비용이 없습니다.",
+      month: "이번 달",
+      today: "오늘",
+      allTime: "전체",
+      transcription: "받아쓰기",
+      cleanup: "다듬기",
+      none: "아직 OpenAI 사용이 없습니다",
     },
     python: {
       checking: "Python 확인 중…",

@@ -5,7 +5,6 @@
   import CountUp from "../ui/CountUp.svelte";
   import { store, type Page } from "../store.svelte";
   import { openReleases, toggleRecording } from "../../ipc";
-  import { shortcutText } from "../../shortcutFormat";
   import { t, tn, intlLocale, type Key } from "../../i18n/index.svelte";
 
   type Range = "all" | "week" | "today";
@@ -64,10 +63,10 @@
   ];
 
   /** Release date of the entries below (month is 0-based). */
-  const CHANGES_DATE = new Date(2026, 9, 16);
+  const CHANGES_DATE = new Date(2026, 10, 15);
   const CHANGES: { id: string; title: Key; body: Key; params?: Record<string, string> }[] = [
-    { id: "settingsWindow", title: "home.changes.settingsWindow.title", body: "home.changes.settingsWindow.body" },
-    { id: "modesVocabulary", title: "home.changes.modesVocabulary.title", body: "home.changes.modesVocabulary.body", params: { keys: shortcutText("Alt+Shift+KeyK") } },
+    { id: "cleanup", title: "home.changes.cleanup.title", body: "home.changes.cleanup.body" },
+    { id: "usage", title: "home.changes.usage.title", body: "home.changes.usage.body" },
   ];
   const changesDate = $derived(CHANGES_DATE.toLocaleDateString(intlLocale(), { month: "short", day: "numeric" }));
 </script>

@@ -163,7 +163,7 @@ These names appear in:
 | `shell.toast.loadFailed` | `{error}` | An error message, already translated. |
 | `home.shareText` | `{range}` `{wpm}` `{words}` `{saved}` | `{range}` is a `home.range.*` label. `{words}` is `home.shareWords` (e.g. "1,204 words"). `{saved}` is a `home.time.*` value, and the sentence ends with "… saved". |
 | `home.stats.savedTooltip` | `{wpm}` | The number 40. |
-| `home.changes.modesVocabulary.body` | `{keys}` | The glyphs `⌥⇧K`. |
+| `shell.nav.soon` | — | Sidebar tag on Vocabulary while it is paused. Keep to one short word. |
 | `modes.tip.body` | `{keys}` | **Special.** The code splits the string at `{keys}` and inserts keycap graphics (or `modes.tip.noShortcut`). `{keys}` must appear exactly once. |
 | `configuration.shortcuts.tip` | `{cmd}` `{delete}` | **Special.** Replaced by bold ⌘ and ⌫ glyphs. Each must appear exactly once. "Right {cmd}" means the right-hand Command key. |
 | `configuration.general.autoPasteSub` | `{keys}` | "⌘V" (or "Ctrl+V"). |
@@ -230,7 +230,7 @@ The pieces are joined with a single space, except before `installMacAfter`.
 
 - `models.card.speed` and `models.card.accuracy` sit in a 60 px label. Use one
   short word.
-- `shell.nav.*`: sidebar items, about 140 px.
+- `shell.nav.*`: sidebar items, about 140 px. `shell.nav.soon` is a 9.5 px tag.
 - `pill.tooltip.*`, `pill.hint.*`, `pill.status.*`: small pill text. Keep them
   very short.
 - `home.stats.*`, `home.savedIn.*`: four columns. Keep them short.
@@ -298,6 +298,7 @@ The pieces are joined with a single space, except before `installMacAfter`.
 
 - `vocabulary.empty.sub` "… Try:": followed by clickable example words.
 - `vocabulary.placeholder`: input hint. Users can paste a comma- or newline-separated list.
+- `vocabulary.soon.*`: the paused/Coming soon state. `badge` is a short pill; `kept` labels the greyed chips of saved terms.
 
 ### configuration
 

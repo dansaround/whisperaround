@@ -41,14 +41,13 @@ export default {
   whatsNew: "What's new?",
   viewAllChanges: "View all changes",
   changes: {
-    settingsWindow: {
-      title: "A brand-new settings window",
-      body: "Sidebar navigation, themes, a configurable pill, single-key and push-to-talk shortcuts, and futuristic sound packs.",
+    cleanup: {
+      title: "Clean up dictation with AI",
+      body: "An optional pass after you stop talking: fillers out, last correction kept, spoken lists written as lists. Needs an OpenAI key; off by default.",
     },
-    modesVocabulary: {
-      title: "Modes & vocabulary",
-      /** {keys} is a keyboard shortcut glyph sequence such as ⌥⇧K. */
-      body: "Switch model and language presets with {keys}, and teach Whisper the names you use.",
+    usage: {
+      title: "OpenAI usage meter",
+      body: "Settings › Models library shows estimated API spend. Vocabulary is paused (Coming soon) so it stops echoing into transcripts.",
     },
   },
 } as const;
