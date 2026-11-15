@@ -18,7 +18,7 @@ pub enum Kind {
     Cleanup,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Charge {
     pub usd_micros: u64,
     pub kind: Kind,
