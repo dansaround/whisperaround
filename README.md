@@ -66,7 +66,8 @@ o exportarla a mano.
 - **Inicio:** tus estadísticas de uso (palabras, tiempo dictado, apps) y novedades.
 - **Modos:** combinaciones de modelo de voz + idioma (por ejemplo 'Inglés con
   OpenAI', 'Español local') para cambiar de una a otra con un atajo.
-- **Vocabulario:** nombres propios y jerga para que se escriban bien.
+- **Vocabulario:** nombres propios y jerga para que se escriban bien (con el
+  modelo en la nube o con la limpieza con IA; un modelo local solo no lo usa).
 - **Configuración:** idioma de la interfaz (9 idiomas), estilo y posición de la
   píldora (Clásica / Mini / Ninguna, arriba o abajo), micrófono y atajos.
 - **Atajos:** además de combinaciones como `Ctrl+Shift+X`, puedes usar una sola
@@ -79,6 +80,10 @@ o exportarla a mano.
   al elegir 'GPU' se descargan una vez las bibliotecas de NVIDIA (~1,5 GB). En
   'Auto' se usa la GPU si esas bibliotecas ya están instaladas y si no, la CPU.
   Si la GPU falla, la app vuelve sola a la CPU y te avisa.
+- **Limpiar el dictado con IA (opcional, desactivado por defecto):** con tu API
+  key de OpenAI, cada dictado pasa por un modelo de lenguaje que quita
+  muletillas y autocorrecciones, corrige la puntuación y convierte las
+  enumeraciones en listas, también si transcribes con un modelo local.
 - **Reuniones:** iniciar/detener el modo reunión, ver la transcripción en vivo,
   copiarla o exportarla a `.md`. Ahí eliges la fuente (micrófono + audio del
   sistema, solo audio del sistema o solo micrófono), la carpeta donde se guardan

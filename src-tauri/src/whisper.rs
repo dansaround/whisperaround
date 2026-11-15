@@ -19,9 +19,9 @@ pub const DEPRECATED: &[&str] = &["whisper-1", "gpt-4o-transcribe", "gpt-4o-mini
 pub struct Options {
     /// ISO-639-1 code; empty = auto-detect.
     pub language: String,
-    /// Free-form context for the local faster-whisper models. Cloud models use `keywords`.
-    pub prompt: Option<String>,
-    /// Vocabulary terms (names, jargon) expected in the audio. Sent to gpt-transcribe as `keywords[]`.
+    /// Vocabulary terms (names, jargon) expected in the audio. Sent to gpt-transcribe as
+    /// `keywords[]`; local models ignore them (as a Whisper prompt they get echoed instead of
+    /// transcribed).
     pub keywords: Vec<String>,
 }
 

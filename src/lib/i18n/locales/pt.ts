@@ -198,7 +198,7 @@ const dict: Dict = {
   },
   vocabulary: {
     title: "Vocabulário",
-    info: "O Whisper usa esses termos como dica para que nomes, marcas e jargões apareçam com a grafia que você usa.",
+    info: "O modelo na nuvem usa esses termos como dica para que nomes, marcas e jargões apareçam com a grafia que você usa.",
     count: { one: "{count} termo", other: "{count} termos" },
     placeholder: "Adicione uma palavra, nome ou frase — cole uma lista para adicionar várias",
     add: "Adicionar",
@@ -208,7 +208,7 @@ const dict: Dict = {
       sub: "Nomes, produtos, siglas e termos do setor. Experimente:",
     },
     footnote:
-      "Os termos são enviados como dica de grafia em cada transcrição (modelos na nuvem e locais). Mantenha a lista enxuta: algumas dezenas de termos funcionam melhor.",
+      "Os termos são enviados como dica de grafia nas transcrições na nuvem e, se ativada, à limpeza com IA; os modelos locais sozinhos não os usam. Mantenha a lista enxuta: algumas dezenas de termos funcionam melhor.",
   },
   configuration: {
     appearance: {
@@ -356,6 +356,11 @@ const dict: Dict = {
     liveTyping: {
       title: "Digitar enquanto fala",
       sub: "O texto é digitado no app enquanto você fala. Desligado, ele aparece no pill e é colado ao terminar.",
+    },
+    cleanup: {
+      title: "Limpar o ditado com IA",
+      sub: "Remove palavras de preenchimento e autocorreções, corrige a pontuação e transforma enumerações ditadas em listas. Quando ativado, o texto ditado e seu vocabulário são enviados à OpenAI, também com modelos locais. Adiciona 2–3 s.",
+      needsKey: "Requer uma chave de API da OpenAI. Adicione-a acima para ativar.",
     },
     python: {
       checking: "Verificando o Python…",

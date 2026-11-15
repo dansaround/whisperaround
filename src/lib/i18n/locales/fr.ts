@@ -202,7 +202,7 @@ const dict: Dict = {
   },
   vocabulary: {
     title: "Vocabulaire",
-    info: "Whisper s’appuie sur ces termes pour que les noms, les marques et le jargon soient orthographiés comme vous les écrivez.",
+    info: "Le modèle cloud s’appuie sur ces termes pour que les noms, les marques et le jargon soient orthographiés comme vous les écrivez.",
     count: { one: "{count} terme", other: "{count} termes" },
     placeholder: "Ajoutez un mot, un nom ou une expression — collez une liste pour en ajouter plusieurs",
     add: "Ajouter",
@@ -212,7 +212,7 @@ const dict: Dict = {
       sub: "Noms, produits, acronymes et termes métier. Essayez :",
     },
     footnote:
-      "Les termes sont envoyés comme indication d’orthographe à chaque transcription (modèles cloud et locaux). Gardez une liste ciblée — quelques dizaines de termes suffisent.",
+      "Les termes sont envoyés comme indication d’orthographe avec les transcriptions cloud et, s’il est activé, au nettoyage par IA ; seuls, les modèles locaux les ignorent. Gardez une liste ciblée — quelques dizaines de termes suffisent.",
   },
   configuration: {
     appearance: {
@@ -360,6 +360,11 @@ const dict: Dict = {
     liveTyping: {
       title: "Saisir en parlant",
       sub: "Le texte est saisi dans l’app pendant que vous parlez. Désactivé, il s’affiche dans la pill et se colle à la fin.",
+    },
+    cleanup: {
+      title: "Nettoyer la dictée avec l’IA",
+      sub: "Supprime les mots de remplissage et les reprises, corrige la ponctuation et transforme les énumérations dictées en listes. Activé, le texte dicté et votre vocabulaire sont envoyés à OpenAI, même avec un modèle local. Ajoute 2 à 3 s.",
+      needsKey: "Nécessite une clé d’API OpenAI. Ajoutez-la ci-dessus pour l’activer.",
     },
     python: {
       checking: "Vérification de Python…",

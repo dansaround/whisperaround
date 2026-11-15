@@ -46,6 +46,8 @@
   "error.openai.network": "Error de red: {error}",
   "error.openai.status": "OpenAI respondió {status}: {body}",
   "error.openai.badResponse": "Respuesta no válida de OpenAI: {error}",
+  "error.cleanup.empty": "El modelo no devolvió texto",
+  "notice.cleanupFailed": "No se pudo limpiar el dictado; se pegó tal como se transcribió. {error}",
 
   "error.local.failed": "Falló la transcripción local: {error}",
   "error.local.notDownloaded": "Este modelo aún no se ha descargado. Descárgalo en Ajustes › Biblioteca de modelos.",

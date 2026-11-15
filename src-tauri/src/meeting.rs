@@ -490,7 +490,6 @@ pub fn start(app: &AppHandle) {
         api_key: settings.openai_api_key.clone(),
         opts: whisper::Options {
             language: settings.effective_language().to_string(),
-            prompt: settings.vocabulary_prompt(),
             keywords: settings.vocabulary_keywords(),
         },
         save_history: settings.save_history,

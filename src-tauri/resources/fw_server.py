@@ -112,7 +112,7 @@ def speech_only(audio):
     return np.concatenate([audio[s["start"]:s["end"]] for s in spans])
 
 
-def transcribe_mlx(folder, audio, language=None, prompt=None):
+def transcribe_mlx(folder, audio, language=None):
     import mlx_whisper
 
     drop_models()  # mlx-whisper keeps its own (single) model
@@ -123,7 +123,6 @@ def transcribe_mlx(folder, audio, language=None, prompt=None):
         verbose=None,  # no progress bar
         condition_on_previous_text=False,
         language=language or None,
-        initial_prompt=prompt or None,
     )
     return " ".join(s["text"].strip() for s in result["segments"] if s["text"].strip())
 
@@ -135,17 +134,16 @@ def warm_mlx(folder):
     transcribe_mlx(folder, np.zeros(SR, dtype=np.float32))
 
 
-def transcribe(name, path, language=None, prompt=None, mlx=None, device="cpu"):
+def transcribe(name, path, language=None, mlx=None, device="cpu"):
     if mlx:
         audio = speech_only(load_wav(path))
-        return transcribe_mlx(mlx, audio, language, prompt) if audio.size else ""
+        return transcribe_mlx(mlx, audio, language) if audio.size else ""
     segments, _info = get_model(name, device).transcribe(
         load_wav(path),
         beam_size=5,
         vad_filter=True,
         condition_on_previous_text=False,
         language=language or None,
-        initial_prompt=prompt or None,
     )
     return " ".join(s.text.strip() for s in segments if s.text.strip())
 
@@ -171,7 +169,6 @@ def main():
                         req["model"],
                         req["path"],
                         req.get("language"),
-                        req.get("prompt"),
                         req.get("mlx"),
                         req.get("device", "cpu"),
                     ),

@@ -103,6 +103,22 @@
         </form>
       </div>
     </div>
+    <div class="card">
+      <div class="row tall">
+        <div class="row-text">
+          <strong>{t("models.cleanup.title")}</strong>
+          <small>{v.apiKeyConfigured ? t("models.cleanup.sub") : t("models.cleanup.needsKey")}</small>
+        </div>
+        <div class="control">
+          <Toggle
+            label={t("models.cleanup.title")}
+            checked={v.dictationCleanup && v.apiKeyConfigured}
+            disabled={!v.apiKeyConfigured}
+            onchange={(dictationCleanup) => store.patch({ dictationCleanup })}
+          />
+        </div>
+      </div>
+    </div>
     {#if v.model === "gpt-live-transcribe"}
       <div class="card">
         <div class="row tall">
