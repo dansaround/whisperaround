@@ -41,6 +41,11 @@ export default {
     title: "Type as you speak",
     sub: "Text is typed into the app as you talk. If off, it shows in the pill and is pasted when you stop.",
   },
+  cleanup: {
+    title: "Clean up dictation with AI",
+    sub: "Removes filler words and self-corrections, fixes punctuation and writes spoken lists as lists. When on, the dictated text and your vocabulary are sent to OpenAI, also with local models. Adds 2–3 s.",
+    needsKey: "Needs an OpenAI API key. Add one above to turn it on.",
+  },
   python: {
     checking: "Checking Python…",
     notFound: "Python 3 not found",

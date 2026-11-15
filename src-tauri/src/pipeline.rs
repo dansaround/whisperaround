@@ -9,7 +9,7 @@ use crate::history::{self, Entry};
 use crate::i18n::{t, tf};
 use crate::sounds::{self, Sound};
 use crate::state::{set_status, AppState, AppStatus};
-use crate::{inject, live, local, recorder, whisper};
+use crate::{cleanup, inject, live, local, recorder, whisper};
 
 /// Translation key for "the microphone picked up nothing".
 #[cfg(target_os = "macos")]
@@ -59,7 +59,6 @@ fn start(app: &AppHandle) {
             settings.openai_api_key.clone(),
             whisper::Options {
                 language: settings.effective_language().to_string(),
-                prompt: None,
                 keywords: settings.vocabulary_keywords(),
             },
             settings.live_typing,
@@ -155,7 +154,6 @@ fn stop_and_transcribe(app: &AppHandle) {
     let model = settings.effective_model().to_string();
     let opts = whisper::Options {
         language: settings.effective_language().to_string(),
-        prompt: settings.vocabulary_prompt(),
         keywords: settings.vocabulary_keywords(),
     };
     let app = app.clone();
@@ -201,6 +199,25 @@ fn stop_and_transcribe(app: &AppHandle) {
                     set_status(&app, AppStatus::Idle, None);
                     return;
                 }
+                // Optional cleanup (status stays Processing). Text already typed while
+                // speaking can't be replaced, and without a key the option is off.
+                let text = if settings.dictation_cleanup
+                    && typed.trim().is_empty()
+                    && !settings.openai_api_key.trim().is_empty()
+                    && cleanup::worth_cleaning(&text)
+                {
+                    let cleaned = cleanup::clean(&settings.openai_api_key, &text, &settings.vocabulary).await;
+                    match cleaned {
+                        Ok(cleaned) => cleaned,
+                        Err(e) => {
+                            // Never lose the dictation: paste it as transcribed.
+                            let _ = app.emit("notice", tf("notice.cleanupFailed", &[("error", &e)]));
+                            text
+                        }
+                    }
+                } else {
+                    text
+                };
                 if let Err(e) = inject::copy_to_clipboard(&app, &text) {
                     set_status(&app, AppStatus::Error, Some(e.to_string()));
                     return;

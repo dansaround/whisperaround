@@ -35,6 +35,8 @@
   "error.openai.network": "Erreur réseau : {error}",
   "error.openai.status": "OpenAI a répondu {status} : {body}",
   "error.openai.badResponse": "Réponse non valide d’OpenAI : {error}",
+  "error.cleanup.empty": "Le modèle n’a renvoyé aucun texte",
+  "notice.cleanupFailed": "Impossible de nettoyer la dictée ; elle a été collée telle que transcrite. {error}",
   "error.local.failed": "Échec de la transcription locale : {error}",
   "error.local.notDownloaded": "Ce modèle n’est pas encore téléchargé. Téléchargez-le dans Réglages › Modèles.",
   "error.local.workerExited": "le processus faster-whisper s’est arrêté de façon inattendue",

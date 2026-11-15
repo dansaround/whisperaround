@@ -35,6 +35,8 @@
   "error.openai.network": "ネットワークエラー：{error}",
   "error.openai.status": "OpenAIからの応答（{status}）：{body}",
   "error.openai.badResponse": "OpenAIからの応答が無効です：{error}",
+  "error.cleanup.empty": "モデルがテキストを返しませんでした",
+  "notice.cleanupFailed": "ディクテーションを整えられなかったため、文字起こしのまま貼り付けました。{error}",
   "error.local.failed": "ローカルでの文字起こしに失敗しました：{error}",
   "error.local.notDownloaded": "このモデルはまだダウンロードされていません。設定 › モデルライブラリでダウンロードしてください。",
   "error.local.workerExited": "faster-whisperのプロセスが予期せず終了しました",

@@ -35,6 +35,8 @@
   "error.openai.network": "网络错误：{error}",
   "error.openai.status": "OpenAI 返回 {status}：{body}",
   "error.openai.badResponse": "OpenAI 返回了无效响应：{error}",
+  "error.cleanup.empty": "模型没有返回文本",
+  "notice.cleanupFailed": "无法整理听写内容，已按转写原文粘贴。{error}",
   "error.local.failed": "本地转写失败：{error}",
   "error.local.notDownloaded": "此模型尚未下载。请在设置 › 模型库中下载。",
   "error.local.workerExited": "faster-whisper 进程意外退出",

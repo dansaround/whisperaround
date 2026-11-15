@@ -46,6 +46,8 @@
   "error.openai.network": "Network error: {error}",
   "error.openai.status": "OpenAI responded {status}: {body}",
   "error.openai.badResponse": "Invalid response from OpenAI: {error}",
+  "error.cleanup.empty": "The model returned no text",
+  "notice.cleanupFailed": "Couldn't clean up the dictation, pasted it as transcribed. {error}",
 
   "error.local.failed": "Local transcription failed: {error}",
   "error.local.notDownloaded": "This model isn't downloaded yet. Download it in Settings › Models library.",

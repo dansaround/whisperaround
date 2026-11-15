@@ -1,5 +1,6 @@
 //! WhisperAround — application setup: state, global shortcut, system tray.
 
+mod cleanup;
 mod commands;
 mod downloads;
 mod echo;

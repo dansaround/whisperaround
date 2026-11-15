@@ -202,7 +202,7 @@ const dict: Dict = {
   },
   vocabulary: {
     title: "Vocabolario",
-    info: "Whisper usa questi termini come suggerimento, così nomi, marchi e gergo vengono trascritti come li scrivi tu.",
+    info: "Il modello cloud usa questi termini come suggerimento, così nomi, marchi e gergo vengono trascritti come li scrivi tu.",
     count: { one: "{count} termine", other: "{count} termini" },
     placeholder: "Aggiungi una parola, un nome o una frase — incolla un elenco per aggiungerne molti",
     add: "Aggiungi",
@@ -212,7 +212,7 @@ const dict: Dict = {
       sub: "Nomi, prodotti, sigle e termini di settore. Prova:",
     },
     footnote:
-      "I termini vengono inviati come suggerimento ortografico a ogni trascrizione (modelli cloud e locali). Mantieni l’elenco mirato — qualche decina di termini funziona meglio.",
+      "I termini vengono inviati come suggerimento ortografico con le trascrizioni cloud e, se attiva, alla pulizia con IA; da soli i modelli locali li ignorano. Mantieni l’elenco mirato — qualche decina di termini funziona meglio.",
   },
   configuration: {
     appearance: {
@@ -360,6 +360,11 @@ const dict: Dict = {
     liveTyping: {
       title: "Scrivi mentre parli",
       sub: "Il testo viene digitato nell’app mentre parli. Se è disattivato, appare nella pill e viene incollato alla fine.",
+    },
+    cleanup: {
+      title: "Ripulisci la dettatura con l’IA",
+      sub: "Rimuove intercalari e autocorrezioni, sistema la punteggiatura e trasforma gli elenchi dettati in liste. Se è attiva, il testo dettato e il tuo vocabolario vengono inviati a OpenAI, anche con i modelli locali. Aggiunge 2–3 s.",
+      needsKey: "Richiede una chiave API di OpenAI. Aggiungila qui sopra per attivarla.",
     },
     python: {
       checking: "Verifica di Python…",

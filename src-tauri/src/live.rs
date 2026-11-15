@@ -453,7 +453,6 @@ mod tests {
     fn session_update_omits_empty_language_and_invalid_keywords() {
         let opts = Options {
             language: String::new(),
-            prompt: None,
             keywords: vec![" Tauri ".into(), "a<b".into(), "  ".into()],
         };
         let v = session_update(&opts);

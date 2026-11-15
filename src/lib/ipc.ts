@@ -76,6 +76,7 @@ let previewSettings: SettingsView = {
   meetingAudioDump: false,
   autoPaste: true,
   liveTyping: false,
+  dictationCleanup: false,
   theme: "auto",
   pillStyle: "mini",
   pillAlwaysShow: true,

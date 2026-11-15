@@ -198,7 +198,7 @@ const dict: Dict = {
   },
   vocabulary: {
     title: "Vokabular",
-    info: "Whisper nutzt diese Begriffe als Hinweis, damit Namen, Marken und Fachjargon in der richtigen Schreibweise erscheinen.",
+    info: "Das Cloud-Modell nutzt diese Begriffe als Hinweis, damit Namen, Marken und Fachjargon in der richtigen Schreibweise erscheinen.",
     count: { one: "{count} Begriff", other: "{count} Begriffe" },
     placeholder: "Wort, Namen oder Ausdruck hinzufügen – für mehrere eine Liste einfügen",
     add: "Hinzufügen",
@@ -208,7 +208,7 @@ const dict: Dict = {
       sub: "Namen, Produkte, Abkürzungen und Fachbegriffe. Zum Beispiel:",
     },
     footnote:
-      "Begriffe werden bei jeder Transkription als Schreibhinweis mitgesendet (Cloud- und lokale Modelle). Die Liste kurz halten – einige Dutzend Begriffe funktionieren am besten.",
+      "Begriffe werden bei Cloud-Transkriptionen als Schreibhinweis mitgesendet und, wenn aktiviert, an die KI-Bereinigung; lokale Modelle allein ignorieren sie. Die Liste kurz halten – einige Dutzend Begriffe funktionieren am besten.",
   },
   configuration: {
     appearance: {
@@ -356,6 +356,11 @@ const dict: Dict = {
     liveTyping: {
       title: "Beim Sprechen tippen",
       sub: "Der Text wird beim Sprechen in die App getippt. Ist die Option aus, erscheint er in der Pill und wird am Ende eingefügt.",
+    },
+    cleanup: {
+      title: "Diktat mit KI bereinigen",
+      sub: "Entfernt Füllwörter und Selbstkorrekturen, korrigiert die Zeichensetzung und macht aus diktierten Aufzählungen Listen. Ist die Option an, werden der diktierte Text und dein Vokabular an OpenAI gesendet, auch bei lokalen Modellen. Dauert 2–3 s länger.",
+      needsKey: "Benötigt einen OpenAI-API-Schlüssel. Füge oben einen hinzu, um die Option einzuschalten.",
     },
     python: {
       checking: "Python wird geprüft …",

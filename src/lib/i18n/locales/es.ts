@@ -198,7 +198,7 @@ const dict: Dict = {
   },
   vocabulary: {
     title: "Vocabulario",
-    info: "Whisper usa estos términos como pista para que los nombres, las marcas y la jerga aparezcan con la ortografía que tú usas.",
+    info: "El modelo en la nube usa estos términos como pista para que los nombres, las marcas y la jerga aparezcan con la ortografía que tú usas.",
     count: { one: "{count} término", other: "{count} términos" },
     placeholder: "Añade una palabra, nombre o frase; pega una lista para añadir varias",
     add: "Añadir",
@@ -208,7 +208,7 @@ const dict: Dict = {
       sub: "Nombres, productos, siglas y términos del sector. Prueba con:",
     },
     footnote:
-      "Los términos se envían como pista ortográfica en cada transcripción (modelos en la nube y locales). Mantén la lista concisa: unas pocas docenas de términos funcionan mejor.",
+      "Los términos se envían como pista ortográfica en las transcripciones en la nube y, si está activada, a la limpieza con IA; los modelos locales por sí solos no los usan. Mantén la lista concisa: unas pocas docenas de términos funcionan mejor.",
   },
   configuration: {
     appearance: {
@@ -356,6 +356,11 @@ const dict: Dict = {
     liveTyping: {
       title: "Escribir mientras hablas",
       sub: "El texto se escribe en la app mientras hablas. Si está apagado, se ve en el pill y se pega al terminar.",
+    },
+    cleanup: {
+      title: "Limpiar el dictado con IA",
+      sub: "Quita muletillas y autocorrecciones, corrige la puntuación y convierte las enumeraciones dictadas en listas. Si está activado, el texto dictado y tu vocabulario se envían a OpenAI, también con modelos locales. Añade 2–3 s.",
+      needsKey: "Necesita una clave de API de OpenAI. Añádela arriba para activarlo.",
     },
     python: {
       checking: "Comprobando Python…",

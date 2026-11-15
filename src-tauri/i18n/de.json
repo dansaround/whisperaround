@@ -35,6 +35,8 @@
   "error.openai.network": "Netzwerkfehler: {error}",
   "error.openai.status": "OpenAI antwortete mit {status}: {body}",
   "error.openai.badResponse": "Ungültige Antwort von OpenAI: {error}",
+  "error.cleanup.empty": "Das Modell hat keinen Text zurückgegeben",
+  "notice.cleanupFailed": "Das Diktat konnte nicht bereinigt werden und wurde wie transkribiert eingefügt. {error}",
   "error.local.failed": "Lokale Transkription fehlgeschlagen: {error}",
   "error.local.notDownloaded": "Dieses Modell wurde noch nicht heruntergeladen. Unter Einstellungen › Modellbibliothek herunterladen.",
   "error.local.workerExited": "der faster-whisper-Prozess wurde unerwartet beendet",

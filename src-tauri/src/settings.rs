@@ -47,6 +47,10 @@ pub struct Settings {
     /// spoken instead of pasting it at the end.
     #[serde(default)]
     pub live_typing: bool,
+    /// Send each dictation to an OpenAI language model that removes fillers,
+    /// fixes punctuation and writes spoken lists (needs the API key).
+    #[serde(default)]
+    pub dictation_cleanup: bool,
     /// Whether the first-launch welcome window has been dismissed.
     #[serde(default)]
     pub onboarded: bool,
@@ -233,6 +237,7 @@ pub struct SettingsView {
     pub meeting_audio_dump: bool,
     pub auto_paste: bool,
     pub live_typing: bool,
+    pub dictation_cleanup: bool,
     pub theme: String,
     pub pill_style: String,
     pub pill_always_show: bool,
@@ -274,6 +279,7 @@ pub struct SettingsPatch {
     pub meeting_audio_dump: Option<bool>,
     pub auto_paste: Option<bool>,
     pub live_typing: Option<bool>,
+    pub dictation_cleanup: Option<bool>,
     pub theme: Option<String>,
     pub pill_style: Option<String>,
     pub pill_always_show: Option<bool>,
@@ -393,16 +399,6 @@ impl Settings {
         }
     }
 
-    /// Whisper prompt built from the vocabulary: steers spelling of names and
-    /// jargon without changing the meaning.
-    pub fn vocabulary_prompt(&self) -> Option<String> {
-        if self.vocabulary.is_empty() {
-            None
-        } else {
-            Some(self.vocabulary.join(", "))
-        }
-    }
-
     /// Vocabulary terms sent to gpt-transcribe as `keywords[]`.
     pub fn vocabulary_keywords(&self) -> Vec<String> {
         self.vocabulary.clone()
@@ -471,6 +467,9 @@ impl Settings {
         }
         if let Some(v) = patch.live_typing {
             self.live_typing = v;
+        }
+        if let Some(v) = patch.dictation_cleanup {
+            self.dictation_cleanup = v;
         }
         if let Some(v) = patch.theme {
             self.theme = one_of(v, &["auto", "light", "dark"], "theme")?;
@@ -565,6 +564,7 @@ impl Settings {
             meeting_audio_dump: self.meeting_audio_dump,
             auto_paste: self.auto_paste,
             live_typing: self.live_typing,
+            dictation_cleanup: self.dictation_cleanup,
             theme: self.theme.clone(),
             pill_style: self.pill_style.clone(),
             pill_always_show: self.pill_always_show,
@@ -726,6 +726,7 @@ mod tests {
         assert_eq!(s.shortcut, default_shortcut());
         assert!(s.auto_paste);
         assert!(!s.live_typing);
+        assert!(!s.dictation_cleanup);
         assert!(!s.onboarded);
         assert_eq!(s.pill_style, "mini");
         assert_eq!(s.pill_position, "top");
@@ -748,6 +749,17 @@ mod tests {
         s.normalize();
         assert_eq!(s.modes[0].model, "gpt-transcribe");
         assert_eq!(s.modes[1].model, "local:small");
+    }
+
+    #[test]
+    fn dictation_cleanup_is_off_by_default_and_patchable() {
+        let mut s = Settings::default();
+        assert!(!s.dictation_cleanup);
+        assert!(!s.view().dictation_cleanup);
+        s.apply_patch(SettingsPatch { dictation_cleanup: Some(true), ..Default::default() }).unwrap();
+        assert!(s.dictation_cleanup);
+        let json = serde_json::to_string(&s.view()).unwrap();
+        assert!(json.contains(r#""dictationCleanup":true"#));
     }
 
     #[test]
@@ -809,14 +821,14 @@ mod tests {
     }
 
     #[test]
-    fn vocabulary_is_cleaned_and_joined() {
+    fn vocabulary_is_cleaned() {
         let mut s = Settings::default();
         s.apply_patch(SettingsPatch {
             vocabulary: Some(vec![" Tauri ".into(), "".into(), "tauri".into(), "Svelte".into()]),
             ..Default::default()
         })
         .unwrap();
-        assert_eq!(s.vocabulary_prompt().as_deref(), Some("Tauri, Svelte"));
+        assert_eq!(s.vocabulary_keywords(), ["Tauri", "Svelte"]);
     }
 
     #[test]

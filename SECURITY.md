@@ -8,7 +8,7 @@ al código que lo implementa.
 
 | Pregunta | Respuesta | Dónde verlo |
 | --- | --- | --- |
-| ¿A dónde se envía? | Solo a `https://api.openai.com/v1/audio/transcriptions`, como cabecera `Authorization: Bearer`, cuando transcribes con un modelo de OpenAI. | [`src-tauri/src/whisper.rs`](src-tauri/src/whisper.rs) (único uso de la key; test `key_goes_only_to_openai_over_https`) |
+| ¿A dónde se envía? | Solo a `api.openai.com`, como cabecera `Authorization: Bearer`: a `https://api.openai.com/v1/audio/transcriptions` (o `wss://api.openai.com/v1/realtime` con `gpt-live-transcribe`) cuando transcribes con un modelo de OpenAI, y a `https://api.openai.com/v1/responses` si activas 'Limpiar el dictado con IA'. | [`whisper.rs`](src-tauri/src/whisper.rs), [`live.rs`](src-tauri/src/live.rs) y [`cleanup.rs`](src-tauri/src/cleanup.rs) (test `key_goes_only_to_openai_over_https` en `whisper.rs` y `cleanup.rs`) |
 | ¿Dónde se guarda? | Windows: Administrador de credenciales (cifrado con DPAPI, ligado a tu usuario). macOS: Llavero. Linux: archivo de ajustes de la app. Nunca en `settings.json` en Windows/macOS. | [`src-tauri/src/secret.rs`](src-tauri/src/secret.rs), [`src-tauri/src/settings.rs`](src-tauri/src/settings.rs) (test `key_stays_out_of_the_file_when_the_os_store_exists`) |
 | ¿La ve la interfaz (webview)? | No. El frontend solo recibe `apiKeyConfigured: true/false`; la key nunca vuelve del proceso Rust. | `SettingsView` en [`settings.rs`](src-tauri/src/settings.rs) (test `view_never_contains_the_key`) |
 | ¿Se registra en logs? | No. Los errores de OpenAI se muestran tal cual los devuelve la API (que enmascara la key). | [`whisper.rs`](src-tauri/src/whisper.rs) |
@@ -27,12 +27,14 @@ las conexiones que hace:
 | Destino | Cuándo | Qué se envía |
 | --- | --- | --- |
 | `api.openai.com` | Al transcribir con un modelo de OpenAI | El audio grabado (WAV), tu API key y, si los configuras, el idioma y tu vocabulario |
+| `api.openai.com` | Después de cada dictado de 4 palabras o más, solo si activas 'Limpiar el dictado con IA' (Modelos; desactivado por defecto), también con un modelo local | El texto dictado, tu vocabulario y tu API key. Las reuniones no se envían |
 | `pypi.org` | La primera vez que usas un modelo local | Descarga del paquete `faster-whisper` en un entorno privado de la app |
 | `pypi.org` | Al elegir 'GPU' en Modelos › Procesador | Descarga de `nvidia-cublas-cu12` y `nvidia-cudnn-cu12` (bibliotecas CUDA de NVIDIA) en el mismo entorno privado |
 | `huggingface.co` | La primera vez que usas cada modelo local (o al descargar uno desde Modelos, en Mac) | Descarga del modelo, fijada a una revisión concreta |
 | `github.com` | Al abrir la app | Consulta si hay versión nueva (`latest.json`); no envía datos tuyos |
 
-Con un modelo local, el audio no sale de tu equipo.
+Con un modelo local, el audio no sale de tu equipo; el texto dictado tampoco,
+salvo que actives 'Limpiar el dictado con IA'.
 
 Además, la interfaz corre con una Content Security Policy estricta
 ([`tauri.conf.json`](src-tauri/tauri.conf.json)): no puede cargar scripts ni

@@ -83,6 +83,8 @@ export interface SettingsView {
   autoPaste: boolean;
   /** Type the live transcript into the focused app while speaking (gpt-live-transcribe). */
   liveTyping: boolean;
+  /** Clean each dictation with an OpenAI language model (needs the API key). */
+  dictationCleanup: boolean;
   theme: Theme;
   pillStyle: PillStyle;
   pillAlwaysShow: boolean;

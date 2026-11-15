@@ -236,7 +236,6 @@ pub fn transcribe(
         "model": model,
         "path": path.to_string_lossy(),
         "language": opts.language,
-        "prompt": opts.prompt,
     });
     add_engine(app, model, &mut req)?;
     std::fs::write(&path, wav).map_err(|e| anyhow!(tf("error.local.writeAudio", &[("error", &e)])))?;
