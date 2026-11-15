@@ -5,7 +5,7 @@ const dict: Dict = {
   common: {
     autoDetect: "Automatisch erkennen",
     modelDesc: {
-      "gpt-transcribe": "Das aktuelle Transkriptionsmodell von OpenAI. Genau bei Namen und Fachbegriffen, und nutzt das Vokabular als Schlüsselwörter.",
+      "gpt-transcribe": "Das aktuelle Transkriptionsmodell von OpenAI. Genau bei Namen und Fachbegriffen.",
       "gpt-live-transcribe": "Transkribiert die Stimme schon während des Sprechens, damit der Text fertig ist, sobald du aufhörst. Kostet etwa viermal so viel.",
       "local:small": "Läuft auf diesem Computer – ohne Internet, ohne API-Schlüssel. Leicht und schnell.",
       "local:medium": "Lokal und privat, genauer, braucht aber mehr Arbeitsspeicher.",
@@ -95,6 +95,7 @@ const dict: Dict = {
       home: "Start",
       modes: "Modi",
       vocabulary: "Vokabular",
+      soon: "Bald",
       configuration: "Konfiguration",
       sound: "Ton",
       models: "Modellbibliothek",
@@ -154,13 +155,13 @@ const dict: Dict = {
     whatsNew: "Was ist neu?",
     viewAllChanges: "Alle Änderungen anzeigen",
     changes: {
-      settingsWindow: {
-        title: "Ein ganz neues Einstellungsfenster",
-        body: "Navigation per Seitenleiste, Designs, eine anpassbare Kapsel, Einzeltasten- und Push-to-Talk-Kurzbefehle sowie futuristische Soundpakete.",
+      cleanup: {
+        title: "Diktat mit KI bereinigen",
+        body: "Ein optionaler Schritt nach dem Sprechen: Füllwörter weg, letzte Korrektur behalten, gesprochene Aufzählungen als Listen. Braucht einen OpenAI-Schlüssel; standardmäßig aus.",
       },
-      modesVocabulary: {
-        title: "Modi & Vokabular",
-        body: "Modell- und Sprachvorgaben mit {keys} wechseln und Whisper die eigenen Namen beibringen.",
+      usage: {
+        title: "OpenAI-Nutzungszähler",
+        body: "Einstellungen › Modellbibliothek zeigt die geschätzten API-Kosten. Das Vokabular ist pausiert (Bald), damit es nicht mehr in Transkripte rutscht.",
       },
     },
   },
@@ -209,6 +210,13 @@ const dict: Dict = {
     },
     footnote:
       "Begriffe werden bei Cloud-Transkriptionen als Schreibhinweis mitgesendet und, wenn aktiviert, an die KI-Bereinigung; lokale Modelle allein ignorieren sie. Die Liste kurz halten – einige Dutzend Begriffe funktionieren am besten.",
+    soon: {
+      badge: "Demnächst",
+      title: "Vorerst pausiert",
+      body: "Gespeicherte Begriffe landeten in Transkripten, die sie gar nicht enthielten – vor allem bei lokalen Modellen. Die Liste bleibt auf diesem Computer; bis zur Rückkehr geht sie an kein Modell.",
+      kept: "Deine Begriffe bleiben erhalten",
+      footnote: "Das Vokabular kommt zurück, sobald es nur die Wörter betrifft, die du wirklich sagst.",
+    },
   },
   configuration: {
     appearance: {
@@ -359,8 +367,18 @@ const dict: Dict = {
     },
     cleanup: {
       title: "Diktat mit KI bereinigen",
-      sub: "Entfernt Füllwörter und Selbstkorrekturen, korrigiert die Zeichensetzung und macht aus diktierten Aufzählungen Listen. Ist die Option an, werden der diktierte Text und dein Vokabular an OpenAI gesendet, auch bei lokalen Modellen. Dauert 2–3 s länger.",
+      sub: "Entfernt Füllwörter und Selbstkorrekturen, korrigiert die Zeichensetzung und macht aus diktierten Aufzählungen Listen. Ist die Option an, wird der diktierte Text an OpenAI gesendet, auch bei lokalen Modellen. Dauert 2–3 s länger.",
       needsKey: "Benötigt einen OpenAI-API-Schlüssel. Füge oben einen hinzu, um die Option einzuschalten.",
+    },
+    cost: {
+      title: "API-Nutzung",
+      sub: "Schätzung anhand der veröffentlichten OpenAI-Preise. Lokale Modelle kosten nichts.",
+      month: "Diesen Monat",
+      today: "Heute",
+      allTime: "Gesamt",
+      transcription: "Transkription",
+      cleanup: "Bereinigung",
+      none: "Noch keine OpenAI-Nutzung",
     },
     python: {
       checking: "Python wird geprüft …",

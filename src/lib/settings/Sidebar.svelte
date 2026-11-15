@@ -65,6 +65,9 @@
           >
             <span class="squircle" style="background:{item.color}"><Icon name={item.icon} size={12} stroke={2.2} /></span>
             <span class="label">{t(item.label)}</span>
+            {#if item.id === "vocabulary"}
+              <span class="soon">{t("shell.nav.soon")}</span>
+            {/if}
           </button>
         {/each}
       </div>
@@ -190,6 +193,21 @@
   }
   .item:hover .squircle {
     transform: scale(1.08);
+  }
+  .label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .soon {
+    margin-left: auto;
+    padding: 0 5px;
+    border-radius: 4px;
+    background: var(--chip);
+    color: var(--text-2);
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
   }
   .foot {
     margin-top: auto;

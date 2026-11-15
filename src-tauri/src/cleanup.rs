@@ -36,6 +36,37 @@ const VOCABULARY_RULE: &str = "\n- Spell these terms exactly as written when the
 struct ResponsesReply {
     #[serde(default)]
     output: Vec<OutputItem>,
+    #[serde(default)]
+    usage: Option<Usage>,
+}
+
+#[derive(Deserialize, Default)]
+struct Usage {
+    #[serde(default)]
+    input_tokens: u64,
+    #[serde(default)]
+    output_tokens: u64,
+    #[serde(default)]
+    input_tokens_details: InputDetails,
+}
+
+#[derive(Deserialize, Default)]
+struct InputDetails {
+    #[serde(default)]
+    cached_tokens: u64,
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+pub struct TokenUsage {
+    pub input: u64,
+    pub cached: u64,
+    pub output: u64,
+}
+
+#[derive(Debug, Clone)]
+pub struct Cleaned {
+    pub text: String,
+    pub usage: TokenUsage,
 }
 
 #[derive(Deserialize)]
@@ -94,18 +125,38 @@ fn reply_text(reply: &ResponsesReply) -> String {
         .to_string()
 }
 
+fn chars_to_tokens(n: usize) -> u64 {
+    (n as u64).div_ceil(4)
+}
+
+fn usage_of(reply: &ResponsesReply, instructions: &str, transcript: &str, cleaned: &str) -> TokenUsage {
+    match &reply.usage {
+        Some(u) => TokenUsage {
+            input: u.input_tokens,
+            cached: u.input_tokens_details.cached_tokens,
+            output: u.output_tokens,
+        },
+        None => TokenUsage {
+            input: chars_to_tokens(instructions.len() + transcript.len()),
+            cached: 0,
+            output: chars_to_tokens(cleaned.len()),
+        },
+    }
+}
+
 /// Send a transcript to the model and return the cleaned text. Errors are
 /// translated; the caller falls back to the raw transcript.
-pub async fn clean(api_key: &str, text: &str, vocabulary: &[String]) -> Result<String> {
+pub async fn clean(api_key: &str, text: &str, vocabulary: &[String]) -> Result<Cleaned> {
     if api_key.trim().is_empty() {
         return Err(anyhow!(t("error.openai.noKey")));
     }
 
+    let body = request_body(text, vocabulary);
     let resp = reqwest::Client::new()
         .post(ENDPOINT)
         .bearer_auth(api_key)
         .timeout(TIMEOUT)
-        .json(&request_body(text, vocabulary))
+        .json(&body)
         .send()
         .await
         .map_err(|e| anyhow!(tf("error.openai.network", &[("error", &e)])))?;
@@ -124,7 +175,11 @@ pub async fn clean(api_key: &str, text: &str, vocabulary: &[String]) -> Result<S
     if cleaned.is_empty() {
         return Err(anyhow!(t("error.cleanup.empty")));
     }
-    Ok(cleaned)
+    let instructions = body["instructions"].as_str().unwrap_or("");
+    Ok(Cleaned {
+        usage: usage_of(&reply, instructions, text, &cleaned),
+        text: cleaned,
+    })
 }
 
 #[cfg(test)]
@@ -189,6 +244,27 @@ mod tests {
         let reply: ResponsesReply =
             serde_json::from_str(r#"{"output": [{"type": "reasoning", "summary": []}]}"#).unwrap();
         assert_eq!(reply_text(&reply), "");
+    }
+
+    #[test]
+    fn usage_prefers_the_api_counts() {
+        let reply: ResponsesReply = serde_json::from_str(
+            r#"{"output":[],"usage":{"input_tokens":80,"output_tokens":12,"input_tokens_details":{"cached_tokens":20}}}"#,
+        )
+        .unwrap();
+        let u = usage_of(&reply, "instr", "hola", "hola");
+        assert_eq!(u.input, 80);
+        assert_eq!(u.cached, 20);
+        assert_eq!(u.output, 12);
+    }
+
+    #[test]
+    fn usage_falls_back_to_character_counts() {
+        let reply: ResponsesReply = serde_json::from_str(r#"{"output":[]}"#).unwrap();
+        let u = usage_of(&reply, "abcd", "efgh", "ij");
+        assert_eq!(u.input, 2);
+        assert_eq!(u.cached, 0);
+        assert_eq!(u.output, 1);
     }
 
     #[test]

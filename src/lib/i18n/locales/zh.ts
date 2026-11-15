@@ -5,7 +5,7 @@ const dict: Dict = {
   common: {
     autoDetect: "自动检测",
     modelDesc: {
-      "gpt-transcribe": "OpenAI 当前的转写模型，对人名和术语很准确，并会把你的词汇表用作关键词。",
+      "gpt-transcribe": "OpenAI 当前的转写模型，对人名和术语很准确。",
       "gpt-live-transcribe": "边说边实时转写，说完即可立即得到文字。费用约为前者的 4 倍。",
       "local:small": "在你的电脑上运行，无需联网，无需 API 密钥。轻巧快速。",
       "local:medium": "本地运行、保护隐私，准确度更高，但占用更多内存。",
@@ -94,6 +94,7 @@ const dict: Dict = {
       home: "主页",
       modes: "模式",
       vocabulary: "词汇",
+      soon: "即将推出",
       configuration: "偏好设置",
       sound: "声音",
       models: "模型库",
@@ -153,13 +154,13 @@ const dict: Dict = {
     whatsNew: "新功能",
     viewAllChanges: "查看所有更改",
     changes: {
-      settingsWindow: {
-        title: "全新的设置窗口",
-        body: "侧边栏导航、主题、可自定的胶囊、单键和按住说话快捷键，以及充满未来感的音效包。",
+      cleanup: {
+        title: "用 AI 整理听写",
+        body: "说完后的可选步骤：去掉口头禅，保留最后一次改口，并把口述列举写成列表。需要 OpenAI 密钥，默认关闭。",
       },
-      modesVocabulary: {
-        title: "模式与词汇",
-        body: "使用 {keys} 切换模型和语言预设，并教 Whisper 认识你常用的名字。",
+      usage: {
+        title: "OpenAI 用量计",
+        body: "设置 › 模型库会显示 API 的估算花费。词汇已暂停（即将推出），以免混入转写。",
       },
     },
   },
@@ -208,6 +209,13 @@ const dict: Dict = {
     },
     footnote:
       "词语会在云端转写时作为拼写提示发送，开启 AI 整理时也会一并发送（仅用本地模型时不使用）。请保持列表精简，几十个词语效果最佳。",
+    soon: {
+      badge: "即将推出",
+      title: "暂时停用",
+      body: "已保存的词语会出现在并不包含它们的转写里，本地模型尤其明显。列表仍留在这台电脑上，重新启用前不会发给任何模型。",
+      kept: "词语会保留",
+      footnote: "等它只影响你真正说出的词时，我们会把词汇加回来。",
+    },
   },
   configuration: {
     appearance: {
@@ -357,8 +365,18 @@ const dict: Dict = {
     },
     cleanup: {
       title: "用 AI 整理听写",
-      sub: "删除口头禅和改口内容，修正标点，并把口述的列举写成列表。开启后，听写文本和你的词汇表会发送给 OpenAI（使用本地模型时也是如此）。会多花 2–3 秒。",
+      sub: "删除口头禅和改口内容，修正标点，并把口述的列举写成列表。开启后，听写文本会发送给 OpenAI（使用本地模型时也是如此）。会多花 2–3 秒。",
       needsKey: "需要 OpenAI API 密钥。在上方添加密钥后即可开启。",
+    },
+    cost: {
+      title: "API 用量",
+      sub: "按 OpenAI 公示价格估算。本地模型不产生费用。",
+      month: "本月",
+      today: "今天",
+      allTime: "累计",
+      transcription: "转写",
+      cleanup: "整理",
+      none: "还没有 OpenAI 用量",
     },
     python: {
       checking: "正在检查 Python…",

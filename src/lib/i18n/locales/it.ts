@@ -5,7 +5,7 @@ const dict: Dict = {
   common: {
     autoDetect: "Rilevamento automatico",
     modelDesc: {
-      "gpt-transcribe": "Il modello di trascrizione attuale di OpenAI. Preciso con nomi e gergo, e usa il vocabolario come parole chiave.",
+      "gpt-transcribe": "Il modello di trascrizione attuale di OpenAI. Preciso con nomi e gergo.",
       "gpt-live-transcribe": "Trascrive la voce mentre parli, così il testo è pronto appena smetti. Costa circa quattro volte di più.",
       "local:small": "Funziona sul tuo computer — senza Internet né chiave API. Leggero e veloce.",
       "local:medium": "Locale e privato, più preciso ma usa più memoria.",
@@ -96,6 +96,7 @@ const dict: Dict = {
       home: "Home",
       modes: "Modalità",
       vocabulary: "Vocabolario",
+      soon: "Presto",
       configuration: "Configurazione",
       sound: "Suono",
       models: "Libreria modelli",
@@ -158,13 +159,13 @@ const dict: Dict = {
     whatsNew: "Novità",
     viewAllChanges: "Vedi tutte le novità",
     changes: {
-      settingsWindow: {
-        title: "Una finestra delle impostazioni tutta nuova",
-        body: "Navigazione laterale, temi, capsula personalizzabile, abbreviazioni a tasto singolo e “premi per parlare”, e pacchetti di suoni futuristici.",
+      cleanup: {
+        title: "Ripulisci la dettatura con l’IA",
+        body: "Un passaggio facoltativo a fine dettatura: via gli intercalari, resta l’ultima correzione e gli elenchi dettati diventano liste. Serve una chiave OpenAI; disattivato di default.",
       },
-      modesVocabulary: {
-        title: "Modalità e vocabolario",
-        body: "Passa da una combinazione di modello e lingua all’altra con {keys} e insegna a Whisper i nomi che usi.",
+      usage: {
+        title: "Contatore uso OpenAI",
+        body: "Impostazioni › Libreria modelli mostra la spesa stimata dell’API. Il vocabolario è in pausa (Presto) così smette di comparire nelle trascrizioni.",
       },
     },
   },
@@ -213,6 +214,13 @@ const dict: Dict = {
     },
     footnote:
       "I termini vengono inviati come suggerimento ortografico con le trascrizioni cloud e, se attiva, alla pulizia con IA; da soli i modelli locali li ignorano. Mantieni l’elenco mirato — qualche decina di termini funziona meglio.",
+    soon: {
+      badge: "Presto",
+      title: "In pausa per ora",
+      body: "I termini salvati finivano in trascrizioni che non li contenevano, soprattutto con i modelli locali. L’elenco resta su questo computer; non viene inviato a nessun modello finché non torna.",
+      kept: "I tuoi termini sono conservati",
+      footnote: "Il vocabolario tornerà quando influenzerà solo le parole che dici davvero.",
+    },
   },
   configuration: {
     appearance: {
@@ -363,8 +371,18 @@ const dict: Dict = {
     },
     cleanup: {
       title: "Ripulisci la dettatura con l’IA",
-      sub: "Rimuove intercalari e autocorrezioni, sistema la punteggiatura e trasforma gli elenchi dettati in liste. Se è attiva, il testo dettato e il tuo vocabolario vengono inviati a OpenAI, anche con i modelli locali. Aggiunge 2–3 s.",
+      sub: "Rimuove intercalari e autocorrezioni, sistema la punteggiatura e trasforma gli elenchi dettati in liste. Se è attiva, il testo dettato viene inviato a OpenAI, anche con i modelli locali. Aggiunge 2–3 s.",
       needsKey: "Richiede una chiave API di OpenAI. Aggiungila qui sopra per attivarla.",
+    },
+    cost: {
+      title: "Uso dell’API",
+      sub: "Stima dai prezzi pubblicati di OpenAI. I modelli locali non costano.",
+      month: "Questo mese",
+      today: "Oggi",
+      allTime: "Da sempre",
+      transcription: "Trascrizione",
+      cleanup: "Pulizia",
+      none: "Nessun uso di OpenAI ancora",
     },
     python: {
       checking: "Verifica di Python…",

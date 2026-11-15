@@ -123,7 +123,24 @@ function previewHistory(): History {
     meeting: false,
   }));
   entries.reverse();
-  return { entries, stats: { words: 102_865, audioMs: 49_400_000, sessions: 4_210, apps } };
+  return {
+    entries,
+    stats: {
+      words: 102_865,
+      audioMs: 49_400_000,
+      sessions: 4_210,
+      apps,
+      cost: {
+        usdMicros: 124_000,
+        transcribeUsdMicros: 98_000,
+        cleanupUsdMicros: 26_000,
+        day: new Date().toISOString().slice(0, 10),
+        dayUsdMicros: 4_500,
+        month: new Date().toISOString().slice(0, 7),
+        monthUsdMicros: 38_000,
+      },
+    },
+  };
 }
 let previewHist = previewHistory();
 const previewSettingsListeners = new Set<(v: SettingsView) => void>();

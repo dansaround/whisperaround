@@ -8,6 +8,8 @@ use std::path::PathBuf;
 use std::sync::Mutex;
 use tauri::{AppHandle, Emitter, Manager};
 
+use crate::cost::{Charge, Kind};
+
 const MAX_ENTRIES: usize = 1000;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -36,6 +38,47 @@ pub struct Stats {
     pub audio_ms: u64,
     pub sessions: u64,
     pub apps: Vec<String>,
+    pub cost: CostStats,
+}
+
+/// Estimated OpenAI spend. Day/month buckets roll over on the local calendar.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct CostStats {
+    pub usd_micros: u64,
+    pub transcribe_usd_micros: u64,
+    pub cleanup_usd_micros: u64,
+    pub day: String,
+    pub day_usd_micros: u64,
+    pub month: String,
+    pub month_usd_micros: u64,
+}
+
+impl CostStats {
+    pub fn add(&mut self, charge: Charge) {
+        let now = chrono::Local::now();
+        let day = now.format("%Y-%m-%d").to_string();
+        let month = now.format("%Y-%m").to_string();
+        if self.day != day {
+            self.day = day;
+            self.day_usd_micros = 0;
+        }
+        if self.month != month {
+            self.month = month;
+            self.month_usd_micros = 0;
+        }
+        self.usd_micros = self.usd_micros.saturating_add(charge.usd_micros);
+        self.day_usd_micros = self.day_usd_micros.saturating_add(charge.usd_micros);
+        self.month_usd_micros = self.month_usd_micros.saturating_add(charge.usd_micros);
+        match charge.kind {
+            Kind::Transcribe => {
+                self.transcribe_usd_micros = self.transcribe_usd_micros.saturating_add(charge.usd_micros);
+            }
+            Kind::Cleanup => {
+                self.cleanup_usd_micros = self.cleanup_usd_micros.saturating_add(charge.usd_micros);
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -113,6 +156,19 @@ pub fn record(app: &AppHandle, entry: Entry, keep: bool) {
     let _ = app.emit("history", ());
 }
 
+/// Add an OpenAI charge to the all-time / day / month totals. Independent of
+/// whether the transcript itself is kept.
+pub fn add_cost(app: &AppHandle, charge: Charge) {
+    let state = app.state::<HistoryState>();
+    let mut h = state.0.lock().unwrap();
+    h.stats.cost.add(charge);
+    if let Err(e) = save(app, &h) {
+        eprintln!("[whisperaround] saving history: {e}");
+    }
+    drop(h);
+    let _ = app.emit("history", ());
+}
+
 pub fn snapshot(app: &AppHandle) -> History {
     app.state::<HistoryState>().0.lock().unwrap().clone()
 }
@@ -182,5 +238,26 @@ mod tests {
         }
         assert_eq!(h.entries.len(), MAX_ENTRIES);
         assert_eq!(h.entries[0].id, 5);
+    }
+
+    #[test]
+    fn old_history_json_loads_with_zero_cost() {
+        let old = r#"{"entries":[],"stats":{"words":3,"audioMs":10,"sessions":1,"apps":[]}}"#;
+        let h: History = serde_json::from_str(old).unwrap();
+        assert_eq!(h.stats.words, 3);
+        assert_eq!(h.stats.cost.usd_micros, 0);
+    }
+
+    #[test]
+    fn cost_rolls_the_day_and_keeps_all_time() {
+        let mut c = CostStats::default();
+        c.day = "1999-01-01".into();
+        c.day_usd_micros = 99;
+        c.usd_micros = 99;
+        c.add(crate::cost::transcribe(60_000));
+        assert_eq!(c.day_usd_micros, 4_500);
+        assert_eq!(c.usd_micros, 4_599);
+        assert_eq!(c.transcribe_usd_micros, 4_500);
+        assert_eq!(c.day, chrono::Local::now().format("%Y-%m-%d").to_string());
     }
 }

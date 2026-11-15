@@ -2,6 +2,7 @@
 
 mod cleanup;
 mod commands;
+mod cost;
 mod downloads;
 mod echo;
 mod history;

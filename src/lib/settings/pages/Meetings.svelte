@@ -418,6 +418,13 @@
       transform: rotate(360deg);
     }
   }
+  /* A progress indicator: keep it turning (app.css cuts other animations). */
+  @media (prefers-reduced-motion: reduce) {
+    .spinner {
+      animation-duration: 0.8s !important;
+      animation-iteration-count: infinite !important;
+    }
+  }
   .big {
     padding: 7px 16px;
   }

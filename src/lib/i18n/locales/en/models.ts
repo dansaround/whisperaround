@@ -43,8 +43,18 @@ export default {
   },
   cleanup: {
     title: "Clean up dictation with AI",
-    sub: "Removes filler words and self-corrections, fixes punctuation and writes spoken lists as lists. When on, the dictated text and your vocabulary are sent to OpenAI, also with local models. Adds 2–3 s.",
+    sub: "Removes filler words and self-corrections, fixes punctuation and writes spoken lists as lists. When on, the dictated text is sent to OpenAI, also with local models. Adds 2–3 s.",
     needsKey: "Needs an OpenAI API key. Add one above to turn it on.",
+  },
+  cost: {
+    title: "API usage",
+    sub: "Estimated from OpenAI list prices. Local models cost nothing.",
+    month: "This month",
+    today: "Today",
+    allTime: "All time",
+    transcription: "Transcription",
+    cleanup: "Cleanup",
+    none: "No OpenAI usage yet",
   },
   python: {
     checking: "Checking Python…",

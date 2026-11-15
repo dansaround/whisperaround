@@ -1467,5 +1467,15 @@
     .stage {
       --morph: 1ms;
     }
+    /* The only sign that transcription is running: keep it moving (app.css
+       cuts every other animation to a single 1 ms run). */
+    .spinner {
+      animation-duration: 0.7s !important;
+      animation-iteration-count: infinite !important;
+    }
+    .onyx-wave.thinking span {
+      animation-duration: 1.1s !important;
+      animation-iteration-count: infinite !important;
+    }
   }
 </style>

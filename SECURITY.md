@@ -26,8 +26,8 @@ las conexiones que hace:
 
 | Destino | Cuándo | Qué se envía |
 | --- | --- | --- |
-| `api.openai.com` | Al transcribir con un modelo de OpenAI | El audio grabado (WAV), tu API key y, si los configuras, el idioma y tu vocabulario |
-| `api.openai.com` | Después de cada dictado de 4 palabras o más, solo si activas 'Limpiar el dictado con IA' (Modelos; desactivado por defecto), también con un modelo local | El texto dictado, tu vocabulario y tu API key. Las reuniones no se envían |
+| `api.openai.com` | Al transcribir con un modelo de OpenAI | El audio grabado (WAV), tu API key y, si lo configuras, el idioma. El vocabulario está en pausa (Coming soon) y no se envía |
+| `api.openai.com` | Después de cada dictado de 4 palabras o más, solo si activas 'Limpiar el dictado con IA' (Modelos; desactivado por defecto), también con un modelo local | El texto dictado y tu API key. Las reuniones no se envían |
 | `pypi.org` | La primera vez que usas un modelo local | Descarga del paquete `faster-whisper` en un entorno privado de la app |
 | `pypi.org` | Al elegir 'GPU' en Modelos › Procesador | Descarga de `nvidia-cublas-cu12` y `nvidia-cudnn-cu12` (bibliotecas CUDA de NVIDIA) en el mismo entorno privado |
 | `huggingface.co` | La primera vez que usas cada modelo local (o al descargar uno desde Modelos, en Mac) | Descarga del modelo, fijada a una revisión concreta |
@@ -73,8 +73,9 @@ conectarse a ningún sitio externo, solo hablar con el proceso Rust de la app.
   API key en Windows/macOS).
 - **Historial:** `history.json` en la carpeta de datos de la app, con el texto
   de hasta 1000 transcripciones, su duración, modelo, modo y la app donde
-  dictaste, más estadísticas totales. Está activado por defecto; se desactiva o
-  se borra en Ajustes › Historial. Nunca sale de tu equipo.
+  dictaste, más estadísticas totales y un estimado local del gasto de OpenAI
+  (no es una factura). Está activado por defecto; se desactiva o se borra en
+  Ajustes › Historial. Nunca sale de tu equipo.
 - **Reuniones:** la transcripción de cada reunión va al mismo historial (si está
   activado). Al exportarla se escribe un `.md` en `Documentos/WhisperAround`.
   El audio de las reuniones no se guarda: cada tramo se borra tras transcribirlo.

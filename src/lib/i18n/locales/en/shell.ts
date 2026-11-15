@@ -4,6 +4,8 @@ export default {
     home: "Home",
     modes: "Modes",
     vocabulary: "Vocabulary",
+    /** Sidebar tag on Vocabulary while the feature is paused. */
+    soon: "Soon",
     configuration: "Configuration",
     sound: "Sound",
     models: "Models library",

@@ -351,6 +351,9 @@ fn run_transcriber(app: AppHandle, rx: Receiver<Chunk>, chunker: JoinHandle<Reco
             .or_else(|_| transcribe_chunk(&app, &job, &chunk.samples));
         match result {
             Ok(text) => {
+                if job.local.is_none() {
+                    history::add_cost(&app, crate::cost::transcribe(ms_of(chunk.samples.len())));
+                }
                 let text = text.trim().to_string();
                 if !text.is_empty() {
                     let seg = Segment {
