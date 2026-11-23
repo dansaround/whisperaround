@@ -17,9 +17,9 @@ export default {
     defaultDevice: "{name} (Default)",
     /** Fallback name when the default input device has no name. */
     systemMicrophone: "System microphone",
-    /** Header picker entry (Windows): capture what the speakers play. */
+    /** Header picker entry (Windows, macOS 14.2+): capture what the speakers play. */
     systemAudio: "System audio (speakers)",
-    /** Header picker entry (Windows): microphone and system audio together. */
+    /** Header picker entry (Windows, macOS 14.2+): microphone and system audio together. */
     micAndSystem: "Microphone + system audio",
   },
   update: {

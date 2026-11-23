@@ -1,2 +1,5 @@
 /* Microphone permission prompt. */
 "NSMicrophoneUsageDescription" = "WhisperAround registra la tua voce mentre detti per trasformarla in testo.";
+
+/* System audio permission prompt (meetings and the "System audio" sources). */
+"NSAudioCaptureUsageDescription" = "WhisperAround registra l'audio delle tue chiamate e riunioni, quando lo scegli, per trascrivere ciò che dicono gli altri.";

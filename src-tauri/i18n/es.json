@@ -26,7 +26,9 @@
   "error.recording.threadPanicked": "el hilo de grabación falló",
   "error.recording.encode": "No se pudo codificar el audio: {error}",
 
-  "error.systemAudio.unsupported": "La captura de audio del sistema solo está disponible en Windows.",
+  "error.systemAudio.unsupported": "La captura de audio del sistema requiere Windows o macOS 14.2 o posterior.",
+  "error.systemAudio.tap": "macOS rechazó la captura de audio (error {status})",
+  "error.systemAudio.device": "macOS no pudo crear el dispositivo de captura (error {status})",
   "error.systemAudio.open": "No se pudo capturar el audio del sistema: {error}",
   "error.systemAudio.noDevice": "no hay ningún dispositivo de salida disponible",
   "error.systemAudio.config": "no se pudo leer la configuración del dispositivo de salida: {error}",

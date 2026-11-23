@@ -31,8 +31,8 @@
     return [
       { value: "", label: t("shell.mic.defaultDevice", { name: def?.name ?? t("shell.mic.systemMicrophone") }), icon: "laptop" },
       ...store.devices.filter((d) => !d.isDefault).map((d) => ({ value: d.name, label: d.name, icon: "mic" })),
-      // System audio is captured through WASAPI loopback, which only exists on Windows.
-      ...(IS_WINDOWS
+      // System audio: WASAPI loopback on Windows, a Core Audio process tap on macOS 14.2+.
+      ...(store.view?.systemAudio
         ? [
             { value: "system:", label: t("shell.mic.systemAudio"), icon: "speaker" },
             { value: "mix:", label: t("shell.mic.micAndSystem"), icon: "speaker-low" },

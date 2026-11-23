@@ -8,13 +8,13 @@ export default {
   recording: "Recording a meeting",
   /** {model} is a model name, e.g. "gpt-transcribe". */
   model: "Model: {model}",
-  /** Windows, input is not "Microphone + system audio". */
+  /** System audio available, the source is "Microphone only". */
   hintSuggestMix: "Only your microphone is recorded. To capture both sides of a call and label who spoke, choose “Microphone + system audio” as the source below.",
-  /** Windows, "Microphone + system audio" is selected. */
+  /** "Microphone + system audio" is selected. */
   hintBoth: "Recording your microphone and the system audio. Your lines are labeled “Me”, everyone else “Others”.",
-  /** macOS and other systems. */
+  /** System audio can't be captured here (macOS before 14.2). */
   hintMicOnly: "Only the microphone is recorded.",
-  /** Windows, the source is "System audio only". */
+  /** The source is "System audio only". */
   hintSystem: "Recording only the system audio: what the others in the call say.",
   me: "Me",
   others: "Others",

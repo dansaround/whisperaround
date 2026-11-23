@@ -1,9 +1,10 @@
-//! Audio capture via `cpal` (microphone and, on Windows, system audio), encoded
-//! to 16-bit PCM WAV with `hound`.
+//! Audio capture via `cpal` (microphone and, on Windows and macOS 14.2+,
+//! system audio), encoded to 16-bit PCM WAV with `hound`.
 //!
 //! Everything ends up as 16 kHz mono `f32`, which is what Whisper wants anyway.
-//! Each source is a *track*: a microphone, or the loopback of the default
-//! output device (WASAPI). `cpal::Stream` is `!Send`, so one dedicated thread
+//! Each source is a *track*: a microphone, or the system audio — the loopback
+//! of the default output device on Windows (WASAPI), a Core Audio process tap
+//! on macOS (see `macos_tap`). `cpal::Stream` is `!Send`, so one dedicated thread
 //! owns every stream. The [`Recorder`] handle communicates with that thread
 //! over channels: it waits for the streams to start (surfacing device errors
 //! synchronously) and signals it to stop. While capturing, the thread also
@@ -38,7 +39,7 @@ pub const SAMPLE_RATE: u32 = 16_000;
 pub enum Source {
     /// A microphone by name (the system default when empty).
     Mic(String),
-    /// The default output device's loopback (Windows only).
+    /// Everything the computer plays (see [`system_audio_supported`]).
     System,
     /// A microphone (default when empty) plus the system audio.
     Mix(String),
@@ -63,7 +64,7 @@ impl Source {
 #[serde(rename_all = "lowercase")]
 pub enum TrackKind {
     Mic,
-    #[cfg_attr(not(windows), allow(dead_code))]
+    #[cfg_attr(not(any(windows, target_os = "macos")), allow(dead_code))]
     System,
 }
 
@@ -305,9 +306,11 @@ fn build_stream<T: cpal::SizedSample + 'static>(
 }
 
 /// Start capturing `device` into `track`: the input of a microphone, or the
-/// loopback of an output device for system audio (cpal turns an input stream
-/// on a render device into a WASAPI loopback capture). The track takes the
-/// device's sample rate, so it may be a different one than before.
+/// system audio. On Windows that is the loopback of an output device (cpal
+/// turns an input stream on a render device into a WASAPI loopback capture);
+/// on macOS the tap's aggregate device is an input like a microphone. The
+/// track takes the device's sample rate, so it may be a different one than
+/// before.
 fn start_stream(
     kind: TrackKind,
     device: &cpal::Device,
@@ -319,6 +322,9 @@ fn start_stream(
         TrackKind::Mic => device
             .default_input_config()
             .map_err(|e| anyhow!(tf("error.mic.config", &[("error", &e)])))?,
+        TrackKind::System if cfg!(target_os = "macos") => device
+            .default_input_config()
+            .map_err(|e| anyhow!(tf("error.systemAudio.config", &[("error", &e)])))?,
         TrackKind::System => device
             .default_output_config()
             .map_err(|e| anyhow!(tf("error.systemAudio.config", &[("error", &e)])))?,
@@ -374,10 +380,12 @@ struct Slot {
     kind: TrackKind,
     track: SharedTrack,
     level: Arc<AtomicU32>,
+    /// Declared before `target`, so it stops before whatever the target
+    /// owns (the macOS system audio tap) is torn down.
+    stream: Option<cpal::Stream>,
     target: Target,
     /// Name of the device `stream` runs on; empty when there is none.
     device: String,
-    stream: Option<cpal::Stream>,
     /// Set by the stream's error callback.
     failed: Arc<AtomicBool>,
 }
@@ -420,9 +428,9 @@ fn open_slot(kind: TrackKind, target: Target, level: &Arc<AtomicU32>) -> Result<
         kind,
         track: Arc::new(Mutex::new(TrackBuf::new(kind, SAMPLE_RATE))),
         level: level.clone(),
+        stream: None,
         target,
         device: String::new(),
-        stream: None,
         failed: Arc::new(AtomicBool::new(false)),
     };
     let device = (slot.target)().ok_or_else(|| {
@@ -438,25 +446,91 @@ fn open_slot(kind: TrackKind, target: Target, level: &Arc<AtomicU32>) -> Result<
     Ok(slot)
 }
 
+/// Whether this computer can capture the system audio: always on Windows, on
+/// macOS from 14.2.
+pub fn system_audio_supported() -> bool {
+    #[cfg(windows)]
+    {
+        true
+    }
+    #[cfg(target_os = "macos")]
+    {
+        crate::macos_tap::supported()
+    }
+    #[cfg(not(any(windows, target_os = "macos")))]
+    {
+        false
+    }
+}
+
+/// What the system audio track captures from. On Windows, the default output
+/// device, followed as it changes.
+#[cfg(windows)]
+fn system_target() -> Result<Target> {
+    Ok(Box::new(|| cpal::default_host().default_output_device()))
+}
+
+/// What the system audio track captures from. On macOS, a process tap's
+/// aggregate device, which the target owns: it lives as long as the track and
+/// covers every output device, so there is nothing to follow.
+#[cfg(target_os = "macos")]
+fn system_target() -> Result<Target> {
+    let tap = crate::macos_tap::SystemTap::create()?;
+    // The new device is listed a few milliseconds after it is created.
+    let deadline = Instant::now() + TAP_DEVICE_TIMEOUT;
+    while find_device(tap.device_name()).is_none() && Instant::now() < deadline {
+        thread::sleep(Duration::from_millis(20));
+    }
+    Ok(Box::new(move || find_device(tap.device_name())))
+}
+
+#[cfg(not(any(windows, target_os = "macos")))]
+fn system_target() -> Result<Target> {
+    Err(anyhow!(t("error.systemAudio.unsupported")))
+}
+
+/// How long to wait for a new tap's device to be listed.
+#[cfg(target_os = "macos")]
+const TAP_DEVICE_TIMEOUT: Duration = Duration::from_secs(2);
+
+/// The input device named exactly `name`, if it is connected.
+#[cfg(target_os = "macos")]
+fn find_device(name: &str) -> Option<cpal::Device> {
+    cpal::default_host()
+        .input_devices()
+        .ok()?
+        .find(|d| d.name().ok().as_deref() == Some(name))
+}
+
 /// Open every stream `source` needs, one track each (microphone first).
 fn open_streams(source: &Source, level: &Arc<AtomicU32>) -> Result<Vec<Slot>> {
     // Fail before opening the microphone of a mix we can't complete.
-    if !cfg!(windows) && !matches!(source, Source::Mic(_)) {
+    if !system_audio_supported() && !matches!(source, Source::Mic(_)) {
         return Err(anyhow!(t("error.systemAudio.unsupported")));
     }
     let mic = |name: &str| -> Target {
         let name = name.to_string();
         Box::new(move || find_input(&name))
     };
-    let system = || {
-        open_slot(TrackKind::System, Box::new(|| cpal::default_host().default_output_device()), level)
-            .map_err(|e| anyhow!(tf("error.systemAudio.open", &[("error", &e)])))
-    };
-    Ok(match source {
+    let open_error = |e: anyhow::Error| anyhow!(tf("error.systemAudio.open", &[("error", &e)]));
+    let system = |target: Target| open_slot(TrackKind::System, target, level).map_err(open_error);
+    let slots = match source {
         Source::Mic(name) => vec![open_slot(TrackKind::Mic, mic(name), level)?],
-        Source::System => vec![system()?],
-        Source::Mix(name) => vec![open_slot(TrackKind::Mic, mic(name), level)?, system()?],
-    })
+        Source::System => vec![system(system_target().map_err(open_error)?)?],
+        Source::Mix(name) => {
+            // The system audio target first: on macOS creating the tap takes
+            // a moment, which would otherwise be lost from the system track.
+            let target = system_target().map_err(open_error)?;
+            let mic = open_slot(TrackKind::Mic, mic(name), level)?;
+            vec![mic, system(target)?]
+        }
+    };
+    // One clock for every track: a stream that opened later is padded with
+    // silence for the difference, so the tracks of a mix line up.
+    if let Some(start) = slots.first().map(|s| s.track.lock().unwrap().start) {
+        slots.iter().for_each(|s| s.track.lock().unwrap().start = start);
+    }
+    Ok(slots)
 }
 
 impl Recorder {
@@ -791,5 +865,36 @@ mod tests {
         let mut reader = hound::WavReader::new(std::io::Cursor::new(wav)).unwrap();
         let samples: Vec<i16> = reader.samples::<i16>().map(Result::unwrap).collect();
         assert_eq!(samples, vec![i16::MAX, -i16::MAX]);
+    }
+
+    /// Records the microphone plus the system audio while a system sound
+    /// plays, end to end through the same path as a meeting. Needs the
+    /// microphone and "System Audio Recording" granted to the app running the
+    /// tests: `cargo test mix_records_what_the_computer_plays -- --ignored`.
+    #[cfg(target_os = "macos")]
+    #[test]
+    #[ignore]
+    fn mix_records_what_the_computer_plays() {
+        assert!(system_audio_supported(), "needs macOS 14.2 or later");
+        let recorder = Recorder::start("mix:", |_| {}).expect("start the mix");
+        thread::sleep(Duration::from_millis(300));
+        let status = std::process::Command::new("afplay")
+            .args(["-v", "0.5", "/System/Library/Sounds/Submarine.aiff"])
+            .status()
+            .unwrap();
+        assert!(status.success());
+        thread::sleep(Duration::from_millis(300));
+        let recording = recorder.stop().unwrap();
+        let kinds: Vec<TrackKind> = recording.tracks.iter().map(|t| t.kind).collect();
+        assert_eq!(kinds, [TrackKind::Mic, TrackKind::System]);
+        let system = &recording.tracks[1].samples;
+        let peak = system.iter().fold(0.0f32, |m, s| m.max(s.abs()));
+        let seconds = system.len() as f32 / SAMPLE_RATE as f32;
+        println!("system track: {seconds:.2} s, peak {peak}");
+        assert!(seconds > 1.5, "the system track should follow the wall clock");
+        assert!(peak > 0.01, "the system track is silent");
+        // Both tracks cover the same stretch of time, so they line up in a mix.
+        let mic = recording.tracks[0].samples.len() as f32 / SAMPLE_RATE as f32;
+        assert!((mic - seconds).abs() < 0.2, "mic {mic:.2} s vs system {seconds:.2} s");
     }
 }

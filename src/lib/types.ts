@@ -68,6 +68,8 @@ export interface SettingsView {
   meetingConsent: boolean;
   /** What a meeting records; the microphone is the dictation one. */
   meetingSource: MeetingSource;
+  /** This computer can capture the system audio (Windows, macOS 14.2+). */
+  systemAudio: boolean;
   /** Folder for the transcripts; empty = `<Documents>/WhisperAround`. */
   meetingFolder: string;
   /** Save the transcript there as Markdown when a meeting ends. */

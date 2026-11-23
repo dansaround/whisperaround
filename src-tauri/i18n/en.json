@@ -26,7 +26,9 @@
   "error.recording.threadPanicked": "the recording thread crashed",
   "error.recording.encode": "Couldn't encode the audio: {error}",
 
-  "error.systemAudio.unsupported": "System audio capture is only available on Windows.",
+  "error.systemAudio.unsupported": "System audio capture needs Windows or macOS 14.2 or later.",
+  "error.systemAudio.tap": "macOS refused the audio tap (error {status})",
+  "error.systemAudio.device": "macOS couldn't create the capture device (error {status})",
   "error.systemAudio.open": "Couldn't capture the system audio: {error}",
   "error.systemAudio.noDevice": "no output device available",
   "error.systemAudio.config": "couldn't read the output device's settings: {error}",
