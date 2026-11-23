@@ -43,7 +43,7 @@ reloj). Pasa el ratón por encima para ver sus botones y arrástrala desde
 cualquier parte que no sea un botón. Desde la bandeja puedes abrir Ajustes o
 salir; abrir la app otra vez también abre Ajustes.
 
-**Audio del sistema (Windows):** en el selector de micrófono (arriba en Ajustes)
+**Audio del sistema (Windows y macOS 14.2+):** en el selector de micrófono (arriba en Ajustes)
 puedes elegir **Audio del sistema (altavoces)** para transcribir lo que suena en
 el equipo (un vídeo, una llamada) o **Micrófono + audio del sistema** para
 ambos a la vez.
@@ -53,7 +53,7 @@ inicia desde Ajustes › Reuniones, desde la bandeja o con su propio atajo; la
 píldora muestra un indicador con el tiempo grabado. La primera vez se muestra un
 aviso: avisa a los demás de que grabas. La transcripción avanza mientras hablan
 (por tramos de 30–60 s cortados en pausas, con OpenAI o con un modelo local) y,
-en Windows graba por defecto **Micrófono + audio del sistema** (lo eliges en
+en Windows y macOS 14.2+ graba por defecto **Micrófono + audio del sistema** (lo eliges en
 Ajustes › Reuniones › Fuente, sin cambiar el micrófono del dictado) y separa lo
 que dices tú ('Yo') de lo que dicen los demás ('Otros'), con marcas de tiempo.
 Al terminar se guarda en el Historial como reunión y, salvo que desactives
@@ -111,6 +111,11 @@ de menús (sin icono en el Dock) y el atajo es **`⌘⇧X`**.
    - **Micrófono**, para grabar.
    - **Accesibilidad**, para pegar solo con ⌘V. Sin él, el texto queda en el
      portapapeles.
+
+   La primera vez que grabes el audio del sistema (una reunión con
+   **Micrófono + audio del sistema**, o esa fuente en el selector de micrófono)
+   macOS pide además **Grabación de audio del sistema**. Necesita macOS 14.2 o
+   posterior; sin ese permiso la pista de 'Otros' queda en silencio.
 
    La app está firmada *ad hoc* (sin cuenta de Apple Developer): cada vez que la
    recompiles, macOS la ve como otra app y hay que volver a activar Accesibilidad
@@ -222,6 +227,9 @@ deja el texto en el portapapeles, auto-pegándolo (Ctrl/Cmd+V) en la app enfocad
     local con estadísticas, descarga de modelos locales y textos del backend.
   - `win.rs` / `macos.rs` — integración de plataforma (app en primer plano para
     el historial, Mica en Windows 11, permisos de macOS).
+  - `macos_tap.rs` — audio del sistema en macOS 14.2+: un *process tap* de Core
+    Audio dentro de un dispositivo agregado privado, que `recorder.rs` graba como
+    un micrófono más.
   - `lib.rs` — setup: atajo global, system tray, ventana en background.
 
 La API key de OpenAI nunca se envía al webview; el frontend solo recibe un flag
@@ -325,8 +333,9 @@ evitar el toolchain cruzado bajo WSL2.
 - **GPU NVIDIA:** usa float16, que necesita una GPU con compute capability 7.0+
   (serie RTX 20 o posterior); en GPUs más antiguas falla y se vuelve a la CPU.
   La detección se hace con `nvidia-smi` al abrir la app.
-- **Audio del sistema:** solo Windows (WASAPI loopback del dispositivo de salida
-  predeterminado). En macOS y Linux no se ofrece.
+- **Audio del sistema:** en Windows, WASAPI loopback del dispositivo de salida
+  predeterminado; en macOS 14.2+, un *process tap* de Core Audio de todo lo que
+  suena salvo la propia app. En macOS anteriores y en Linux no se ofrece.
 - **Modo reunión:** sin auriculares, el micrófono también capta los altavoces, así
   que parte de lo que dicen 'Otros' puede aparecer también como 'Yo'. Los tramos se
   cortan en pausas, pero una frase larga puede quedar partida entre dos tramos.

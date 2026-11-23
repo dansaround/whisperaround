@@ -7,7 +7,6 @@
   import Toggle from "../ui/Toggle.svelte";
   import { store } from "../store.svelte";
   import {
-    IS_WINDOWS,
     exportMeeting,
     getMeetingFolder,
     openMeetingFolder,
@@ -23,8 +22,8 @@
   const v = $derived(store.view!);
   const m = $derived(store.meeting);
   const recording = $derived(m.active && !m.finishing);
-  // System audio can only be captured on Windows.
-  const source = $derived<MeetingSource>(IS_WINDOWS ? v.meetingSource : "mic");
+  // System audio can't be captured everywhere (macOS before 14.2).
+  const source = $derived<MeetingSource>(v.systemAudio ? v.meetingSource : "mic");
   const sourceOptions = $derived([
     { value: "mix" as MeetingSource, label: t("meetings.source.mix") },
     { value: "system" as MeetingSource, label: t("meetings.source.system") },
@@ -79,7 +78,7 @@
   });
 
   const hint = $derived(
-    !IS_WINDOWS
+    !v.systemAudio
       ? t("meetings.hintMicOnly")
       : source === "mix"
         ? t("meetings.hintBoth")
@@ -184,7 +183,7 @@
   </div>
 
   <div class="card">
-    {#if IS_WINDOWS}
+    {#if v.systemAudio}
       <div class="row">
         <div class="row-text">
           <strong>{t("meetings.source.title")}</strong>

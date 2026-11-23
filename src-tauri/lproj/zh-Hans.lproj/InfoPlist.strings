@@ -1,2 +1,5 @@
 /* Microphone permission prompt. */
 "NSMicrophoneUsageDescription" = "WhisperAround 会在你听写时录制你的声音，以便将其转换为文字。";
+
+/* System audio permission prompt (meetings and the "System audio" sources). */
+"NSAudioCaptureUsageDescription" = "WhisperAround 会在你选择时录制通话和会议的音频，以便转写其他人所说的话。";

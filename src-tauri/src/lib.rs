@@ -14,6 +14,8 @@ mod local;
 mod macos;
 #[cfg(target_os = "macos")]
 mod macos_input;
+#[cfg(target_os = "macos")]
+mod macos_tap;
 mod meeting;
 #[cfg(any(target_os = "macos", windows))]
 mod native_input;

@@ -197,8 +197,8 @@ fn default_meeting_date_format() -> String {
     "ymd".into()
 }
 fn default_meeting_source() -> String {
-    // System audio can only be captured on Windows.
-    let source = if cfg!(windows) { "mix" } else { "mic" };
+    // System audio can't be captured everywhere (macOS before 14.2).
+    let source = if crate::recorder::system_audio_supported() { "mix" } else { "mic" };
     source.into()
 }
 fn default_mode_icon() -> String {
@@ -229,6 +229,8 @@ pub struct SettingsView {
     pub meeting_shortcut: String,
     pub meeting_consent: bool,
     pub meeting_source: String,
+    /// This computer can capture the system audio (Windows, macOS 14.2+).
+    pub system_audio: bool,
     pub meeting_folder: String,
     pub meeting_autosave: bool,
     pub meeting_date_format: String,
@@ -392,9 +394,10 @@ impl Settings {
             crate::recorder::Source::Mic(name) | crate::recorder::Source::Mix(name) => name,
             crate::recorder::Source::System => String::new(),
         };
+        let system = crate::recorder::system_audio_supported();
         match self.meeting_source.as_str() {
-            "mix" if cfg!(windows) => format!("mix:{mic}"),
-            "system" if cfg!(windows) => "system:".into(),
+            "mix" if system => format!("mix:{mic}"),
+            "system" if system => "system:".into(),
             _ => mic,
         }
     }
@@ -559,6 +562,7 @@ impl Settings {
             meeting_shortcut: self.meeting_shortcut.clone(),
             meeting_consent: self.meeting_consent,
             meeting_source: self.meeting_source.clone(),
+            system_audio: crate::recorder::system_audio_supported(),
             meeting_folder: self.meeting_folder.clone(),
             meeting_autosave: self.meeting_autosave,
             meeting_date_format: self.meeting_date_format.clone(),
@@ -849,7 +853,7 @@ mod tests {
         s.meeting_source = "mic".into();
         assert_eq!(s.meeting_recorder_source(), "USB Mic");
         s.meeting_source = "mix".into();
-        let mix = if cfg!(windows) { "mix:USB Mic" } else { "USB Mic" };
+        let mix = if crate::recorder::system_audio_supported() { "mix:USB Mic" } else { "USB Mic" };
         assert_eq!(s.meeting_recorder_source(), mix);
         s.input_device = "system:".into();
         s.meeting_source = "mic".into();

@@ -1,2 +1,5 @@
 /* Microphone permission prompt. */
 "NSMicrophoneUsageDescription" = "O WhisperAround grava sua voz enquanto você dita para transformá-la em texto.";
+
+/* System audio permission prompt (meetings and the "System audio" sources). */
+"NSAudioCaptureUsageDescription" = "O WhisperAround grava o áudio das suas chamadas e reuniões, quando você escolhe, para transcrever o que os outros dizem.";

@@ -68,6 +68,7 @@ let previewSettings: SettingsView = {
   meetingShortcut: "",
   meetingConsent: false,
   meetingSource: "mix",
+  systemAudio: IS_WINDOWS || IS_MAC,
   meetingFolder: "",
   meetingAutosave: true,
   meetingDateFormat: "ymd",
@@ -360,7 +361,7 @@ export function startMeeting(): Promise<void> {
     setPreviewMeeting({ active: true, finishing: false, startedTs, model: previewSettings.model, segments: [] });
     previewMeetingTimer = setInterval(() => {
       const startMs = Date.now() - startedTs;
-      const both = IS_WINDOWS && previewSettings.meetingSource === "mix";
+      const both = previewSettings.systemAudio && previewSettings.meetingSource === "mix";
       const n = previewMeeting.segments.length;
       const segment = {
         startMs,
